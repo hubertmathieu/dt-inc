@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "projet-s5"
+version = "0.1.0"
+description = ""
+authors = ["William Pepin <wpepin00@gmail.com>"]
+readme = "README.md"
+packages = [{include = "projet_s5"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+matplotlib = "^3.8.0"
+numpy = "^1.26.1"
+scipy = "^1.11.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
