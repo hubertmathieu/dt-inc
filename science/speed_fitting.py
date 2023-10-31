@@ -45,7 +45,14 @@ plt.legend(["30","40","50","60", "70","80", "90","100"])
 plt.show()
 
 x_speed = np.linspace(0,100,100)
+y_speed = np.linspace(0,0.23, 100)
 fitted = np.poly1d((np.polyfit(speed, slopes, 4)))
+print(np.polyfit(speed, slopes, 4))
+fitted_coeffs = np.polyfit(slopes, speed,4)
+print(fitted_coeffs)
+fitted_2 = np.poly1d((np.polyfit(slopes, speed, 4)))
+print
+
 
 plt.plot(speed, slopes, "bo")
 plt.plot(x_speed, fitted(x_speed))
@@ -53,6 +60,12 @@ plt.xlabel("Vitesse des moteurs [%]")
 plt.ylabel("Vitesse du véhicule [m/s]")
 plt.title("Vitesse du véhicule en fonction des moteurs")
 plt.show()
+plt.plot(slopes, speed, "bo")
+plt.plot(y_speed, fitted_2(y_speed))
+plt.ylabel("Vitesse des moteurs [%]")
+plt.xlabel("Vitesse du véhicule [m/s]")
+plt.title("Vitesse du véhicule en fonction des moteurs")
+plt.show()
 
 
-
+np.poly
