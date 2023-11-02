@@ -2,7 +2,6 @@ import csv
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
-from collections import deque
 
 
 file_name = "30.csv"   
