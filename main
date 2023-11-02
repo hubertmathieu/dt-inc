@@ -1,9 +1,9 @@
 import bpy
 import numpy as np
 import math
+from car import Car
 
 # CONST
-STOP_TRSHOLD = 300
 FRAME_RATE = bpy.context.scene.render.fps
 EULER_X = math.radians(-90)
 EULER_Y = math.radians(0)
@@ -19,10 +19,10 @@ bille_name = "BILLE"
 wheelbase_m = 1
 tire_width_m = 1
 
-
 last_distance = 0
+obstacle_distance = 50
 current_angle = EULER_Z
-current_speed = 400
+current_speed = 50
 
 frame = 0 
 
@@ -69,20 +69,23 @@ def steering_angle_to_global_angle(steering_angle):
             current_angle -= angle_traveled_r
             
 
-def advance(steering_angle, stop=False):
+def advance(steering_angle, should_stop=False):
     global last_distance
+    global obstacle_distance
     
     obj = bpy.data.objects[car_name]
     steering_angle_to_global_angle(steering_angle)
     
-    if (stop):
+    if (should_stop):
         next_dist = last_distance - MAX_DELTA
-        next_dist = 0 if (next_dist < 0) else next_dist 
+        next_dist = 0 if (next_dist <= 0) else next_dist 
             
     else :
         next_dist = current_speed / FRAME_RATE
         if (next_dist > last_distance + MAX_DELTA):
             next_dist = last_distance + MAX_DELTA
+    
+    obstacle_distance -= next_dist
     
     set_obj_location(obj, next_dist)
     set_obj_rotation(obj)
@@ -90,20 +93,32 @@ def advance(steering_angle, stop=False):
     
     last_distance = next_dist
     
+
+def determine_stopping_dist(should_stop):
+    if (obstacle_distance > 0 and last_distance > 0 and not should_stop):
+            dist_to_stop = (last_distance ** 2) / (2*MAX_DELTA)
+            should_stop = dist_to_stop > obstacle_distance 
+            
+    return should_stop
     
     
 def loop():
     global frame
     global current_speed
     
-    steering_angle = math.radians(5)
+    steering_angle = math.radians(8)
+    should_stop = False
     
-    while(frame != 2000):
-        if (frame > 100 and current_speed > 0):
-            advance(steering_angle, stop=1)
+    while(frame != 2000 ):
+        
+        if (steering_angle == 0):
+            should_stop = determine_stopping_dist(should_stop)
+            
         else :
-            advance(steering_angle)
-        #decelerate(100)
+            if (frame > 150):
+                should_stop = True
+            
+        advance(steering_angle, should_stop)
  
         frame+=1 
         
