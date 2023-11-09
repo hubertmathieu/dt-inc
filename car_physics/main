@@ -1,7 +1,6 @@
 import bpy
 import numpy as np
 import math
-from car import Car
 
 # CONST
 FRAME_RATE = bpy.context.scene.render.fps
