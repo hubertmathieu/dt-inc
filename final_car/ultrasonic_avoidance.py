@@ -23,14 +23,9 @@ class Ultrasonic_Avoidance(object):
         direction = Vector((xlf, ylf, 0))
         
         # position initiale du laser
-        #xli = xc + (1 + lcx/2) * math.cos(azc - self.angle)
-        #yli = yc + (1 + lcx/2) * math.sin(azc - self.angle)
-
-        xli = xc + 5 * math.cos(azc + self.angle)
-        yli = yc + 5 * math.sin(azc + self.angle)
-        origin = Vector((xli, yli, 1))
-
-        distance_between = (self.us_sensor_obj.matrix_world.translation - origin)
+        xli = xc + 2 * math.cos(azc + self.angle)
+        yli = yc + 2 * math.sin(azc + self.angle)
+        origin = Vector((xli, yli, zc))
 
         # hit: booléen si ça touche qqchose
         # hit_location: vecteur xyz où ça touche. 0,0,0 si hit faux
@@ -40,7 +35,7 @@ class Ultrasonic_Avoidance(object):
         
         if hit:
             # distance: float distance entre le cube et le point de contact
-            distance = (self.us_sensor_obj.matrix_world.translation - hit_location - distance_between).length 
+            distance = (origin - hit_location).length 
             return distance
         else:
             return -1

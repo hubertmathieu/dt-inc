@@ -35,7 +35,7 @@ def init_objects():
     # init car position
     obj = bpy.data.objects[car_name]
     obj.animation_data_clear()
-    obj.location = (38,0,1)
+    obj.location = (22.8,2.5,2)
     obj.rotation_euler = [EULER_X, EULER_Y, -EULER_Z]
     obj.keyframe_insert(data_path="rotation_euler", frame = 0)
     obj = bpy.data.objects[car_name]
@@ -90,7 +90,7 @@ def detect_object():
 
 def move_back():
     global frame
-    stopping_distance = 30
+    stopping_distance = 3
 
     while(frame < 2000):
         bw.backward(frame)
@@ -102,7 +102,7 @@ def move_back():
 
 def main():
     global frame
-    bw.speed = 3
+    bw.speed = 1.5
 
     while(frame < 2000):
         bw.forward(frame)
@@ -110,6 +110,7 @@ def main():
         detect_object()
 
         if (bw.stopped()):
+            frame += 15
             move_back()
 
         frame += 1
