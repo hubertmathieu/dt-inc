@@ -29,6 +29,12 @@ class Front_Wheels():
         CAR_OBJ.rotation_euler = [EULER_X, EULER_Y, -current_angle ]
         CAR_OBJ.keyframe_insert(data_path="rotation_euler", frame = self.frame + 1)
 
+    def _adjust_rotation(self, final_angle):
+        # if (np.abs(final_angle - current_angle) >= 2):
+        #     return 2
+        # else :
+            return final_angle
+
     def _steering_angle_to_global_angle(self, steering_angle):
         global current_angle
 
@@ -38,10 +44,12 @@ class Front_Wheels():
             circle_traveled_ratio = last_distance / turning_circumference_m
             angle_traveled_r = circle_traveled_ratio*2*np.pi
 
+            next_angle_variation = self._adjust_rotation(angle_traveled_r)
+
             if (steering_angle < 0):
-                current_angle -= angle_traveled_r
+                current_angle -= next_angle_variation
             else:
-                current_angle += angle_traveled_r
+                current_angle += next_angle_variation
 
 
 class Back_Wheels:

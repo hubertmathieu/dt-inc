@@ -92,7 +92,7 @@ def detect_object():
 def main():
     frame = 0
     while(frame < 2000):
-        bw.speed = 5
+        bw.speed = 2
         bw.forward(frame)
         follow_line(frame)
         detect_object()
