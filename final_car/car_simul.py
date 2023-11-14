@@ -7,7 +7,7 @@ FRAME_RATE = bpy.context.scene.render.fps
 EULER_X = math.radians(-90)
 EULER_Y = math.radians(0)
 EULER_Z = math.radians(-90)
-MAX_ACCEL = 0.05 / FRAME_RATE
+MAX_ACCEL = 0.1 * (1/FRAME_RATE)
 CAR_OBJ = bpy.data.objects["body_high"]
 
 # Global
@@ -16,8 +16,8 @@ last_distance = 0
 
 class Front_Wheels():
     def __init__(self):
-        self.wheelbase_m = 1
-        self.tire_width_m = 1
+        self.wheelbase_m = 1.4
+        self.tire_width_m = 1.08
         self.frame = 0
 
     def turn(self, steering_angle, actual_frame):
@@ -54,7 +54,7 @@ class Front_Wheels():
 
 class Back_Wheels:
     def __init__(self):
-        self.current_speed = 50
+        self.current_speed = 0
         self.frame = 0
         self.should_stop = False
 
@@ -103,7 +103,7 @@ class Back_Wheels:
                 self.should_stop = dist_to_stop > obstacle_distance
 
     @property
-    def speed(self, speed):
+    def speed(self):
         return self.current_speed
 
     @speed.setter
