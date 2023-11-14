@@ -116,7 +116,8 @@ class Car:
 
     def calculate_acceleration(self):
         last_speed = self._logger.last_measurement().speed
-        return self.movement.speed-last_speed
+        last_timestamp = self._logger.last_measurement.timestamp
+        return (self.movement.speed-last_speed)/self.timestamp - last_timestamp
     
 
     def calculate_position_and_angle(self, timestamp):

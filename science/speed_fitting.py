@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # List of CSV file names
-csv_files = ["30.csv", "40.csv", "50.csv", "60.csv", "70.csv", "80.csv","90.csv","100.csv"]
+car_data = r'car_data/'
+csv_files = [r"car_data/30.csv", r"car_data/40.csv", r"car_data/50.csv", r"car_data/60.csv", r"car_data/70.csv", r"car_data/80.csv",r"car_data/90.csv",r"car_data/100.csv"]
 use_case = []
 
 for csv_file_name in csv_files:
@@ -62,9 +63,9 @@ plt.title("Vitesse du véhicule en fonction des moteurs")
 plt.show()
 plt.plot(slopes, speed, "bo")
 plt.plot(y_speed, fitted_2(y_speed))
-plt.ylabel("Vitesse des moteurs [%]")
+plt.ylabel("Force des moteurs [%]")
 plt.xlabel("Vitesse du véhicule [m/s]")
-plt.title("Vitesse du véhicule en fonction des moteurs")
+plt.title("Force des moteurs en fonction de la vitesse")
 plt.show()
 
 

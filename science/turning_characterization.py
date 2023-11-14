@@ -56,7 +56,7 @@ for turning_angle in turning_angle_r:
     calculate_position(vitesse, turning_angle)
 
 plt.scatter(all_position_x, all_position_y)
-plt.title("Suivi de la position du véhicule selon différents angles de steering")
+plt.title("Suivi de la position du véhicule")
 plt.xlabel("X [m]")
 plt.ylabel("Y [m]")
 plt.grid()
