@@ -28,9 +28,9 @@ def donne_moi_le_steering_pour_faire_le_contournement():
     distance_travelled = vitesse*sampling_time
     delta_position_x = np.diff(relative_position_x)
 
-    current_angle = np.arcsin(delta_position_x/distance_travelled)
+    current_angle = -np.arcsin(delta_position_x/distance_travelled)
     
-    angle_to_travel_r = -np.diff(current_angle)
+    angle_to_travel_r = np.diff(current_angle)
 
     angle_to_travel_r = np.concatenate(([0],angle_to_travel_r,[0]))
 
@@ -45,14 +45,19 @@ def donne_moi_le_steering_pour_faire_le_contournement():
     plt.axvline(0, color="green", linestyle="--")
     plt.plot(0, distance_avant_objet, "ro")
     plt.xticks(range(-3,4))
-    plt.title("Fonction de position du véhicule pour un déplacement à vitesse fixes")
+    plt.xlabel("X [m]")
+    plt.ylabel("Y [m]")
+    plt.title("Fonction de position du véhicule pour un déplacement à vitesse fixe")
+    plt.legend(["Fonction de position", "Ligne guide", "Objet à contourner"])
     plt.show() 
 
 
-    plt.plot(relative_position_y, relative_position_x)
-    plt.plot(relative_position_y[:-1],current_angle)
-    plt.plot(relative_position_y, angle_to_travel_r)
-    plt.title("Angle du véhicule en fonction du mouvement appliqué")
+    
+    plt.plot(relative_position_y[:-1], current_angle)
+    #plt.plot(relative_position_y, angle_to_travel_r)
+    plt.ylabel("Angle [rad]")
+    plt.xlabel("Y [m]")
+    plt.title("Angle du véhicule en fonction de la position")
     plt.show()
 
     plt.plot(relative_position_y,circle_to_travel_ratio)
@@ -61,7 +66,9 @@ def donne_moi_le_steering_pour_faire_le_contournement():
     plt.show()
 
     plt.plot(relative_position_y, steering_angle)
-    plt.title("Traduction du steering en fonction de la physique du véhicule")
+    plt.title("Angle de braquage en fonction de la position")
+    plt.ylabel("Angle [rad]")
+    plt.xlabel("Y [m]")
     plt.show()
 
     return steering_angle
