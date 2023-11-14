@@ -22,10 +22,10 @@ from ultrasonic_avoidance import Ultrasonic_Avoidance
 lf = LineFollower()
 fw = Front_Wheels()
 bw = Back_Wheels()
-ua_1 = Ultrasonic_Avoidance("body_high")
+ua_1 = Ultrasonic_Avoidance(car_name)
 
+frame = 0
 turning_angle = 90
-off_track_status = 0
 a_step = 3
 b_step = 10
 c_step = 30
@@ -43,10 +43,9 @@ def init_objects():
 
 def follow_line(frame):
     global turning_angle
-    global off_track_status
     
     lt_status_now = lf.read_digital()
-    print(lt_status_now)
+    #print(lt_status_now)
     # Angle calculate
     if	lt_status_now == [0,0,1,0,0]:
         step = 0	
@@ -84,18 +83,34 @@ def follow_line(frame):
 def detect_object():
     ua_1_distance = ua_1.get_distance()
 
-    print(ua_1_distance)
+    #print(ua_1_distance)
 
     if ua_1_distance != -1:
         bw.determine_stopping_dist(ua_1_distance)
 
-def main():
-    frame = 0
+def move_back():
+    global frame
+    stopping_distance = 30
+
     while(frame < 2000):
-        bw.speed = 2
+        bw.backward(frame)
+        stopping_distance += bw.last_distance
+        bw.determine_stopping_dist(stopping_distance)
+        if (bw.stopped()):
+            break
+        frame += 1
+
+def main():
+    global frame
+    bw.speed = 3
+
+    while(frame < 2000):
         bw.forward(frame)
         follow_line(frame)
         detect_object()
+
+        if (bw.stopped()):
+            move_back()
 
         frame += 1
 
