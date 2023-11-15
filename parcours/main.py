@@ -22,31 +22,30 @@ from ultrasonic_avoidance import Ultrasonic_Avoidance
 lf = LineFollower()
 fw = Front_Wheels()
 bw = Back_Wheels()
-ua_1 = Ultrasonic_Avoidance("body_high")
+ua_1 = Ultrasonic_Avoidance(car_name)
 
+frame = 0
 turning_angle = 90
-off_track_status = 0
 a_step = 3
 b_step = 10
 c_step = 30
 d_step = 45
 
-def init_objects():
+def init_objects(pos, rot):
     # init car position
     obj = bpy.data.objects[car_name]
     obj.animation_data_clear()
-    obj.location = (38,0,1)
-    obj.rotation_euler = [EULER_X, EULER_Y, -EULER_Z]
+    obj.location = pos
+    obj.rotation_euler = rot
     obj.keyframe_insert(data_path="rotation_euler", frame = 0)
     obj = bpy.data.objects[car_name]
 
 
 def follow_line(frame):
     global turning_angle
-    global off_track_status
     
     lt_status_now = lf.read_digital()
-    print(lt_status_now)
+    #print(lt_status_now)
     # Angle calculate
     if	lt_status_now == [0,0,1,0,0]:
         step = 0	
@@ -60,6 +59,9 @@ def follow_line(frame):
         step = d_step
     elif lt_status_now == [0,0,0,0,0]:
         step = d_step
+    elif lt_status_now == [1,1,1,1,1]:
+        stop()
+        return
 
     # Direction calculate
     if	lt_status_now == [0,0,1,0,0]:
@@ -84,23 +86,71 @@ def follow_line(frame):
 def detect_object():
     ua_1_distance = ua_1.get_distance()
 
-    print(ua_1_distance)
+    #print(ua_1_distance)
 
     if ua_1_distance != -1:
         bw.determine_stopping_dist(ua_1_distance)
 
-def main():
-    frame = 0
+def move_back():
+    global frame
+    stopping_distance = 3
+
     while(frame < 2000):
-        bw.speed = 2
+        bw.backward(frame)
+        stopping_distance += bw.last_distance
+        bw.determine_stopping_dist(stopping_distance)
+        if (bw.stopped()):
+            break
+        frame += 1
+
+def stop():
+    global frame
+    stopping_distance = 1
+
+    while(frame < 2000):
+        bw.forward(frame)
+        stopping_distance -= bw.last_distance
+        bw.determine_stopping_dist(stopping_distance)
+        if (bw.stopped()):
+            bw.speed = 0
+            frame += 1000
+            break
+        frame += 1
+
+def parcours1_widecurve():
+    init_objects((20,-1.9,0.75), [EULER_X, EULER_Y, -EULER_Z])
+
+    global frame
+    frame += 15
+    bw.speed = 1.5
+
+    while(frame < 2000):
         bw.forward(frame)
         follow_line(frame)
         detect_object()
 
+        if (bw.stopped()):
+            frame += 15
+            move_back()
+
+        frame += 1
+
+
+def parcours2_stop():
+    init_objects((-11,0,0.75), [EULER_X, EULER_Y, EULER_Z])
+
+    global frame
+    frame += 15
+    bw.speed = 2.5
+    bw.accel = 0.1
+
+    while(frame < 2000):
+        bw.forward(frame)
+        follow_line(frame)
         frame += 1
 
 
 if __name__ == '__main__':
-    init_objects()
-    main()
+    #parcours1_widecurve()
+    parcours2_stop()
 
