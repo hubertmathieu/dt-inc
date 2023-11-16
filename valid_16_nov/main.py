@@ -82,25 +82,34 @@ def follow_line():
 
 def detect_object_and_stop():
     ua_1_distance = ua_1.get_distance()
+
     if ua_1_distance != -1:
         bw.determine_stopping_dist(ua_1_distance)
 
 def move_at_distance(stopping_distance, forward=True):
     global frame
     while(1):
-        if (not forward):
-            bw.backward(frame)
-            stopping_distance += bw.last_distance
-        else:
+        if (forward):
             bw.forward(frame)
             stopping_distance -= bw.last_distance
+        else:
+            bw.backward(frame)
+            stopping_distance += bw.last_distance
+
         bw.determine_stopping_dist(stopping_distance)
         if (bw.stopped()):
-            bw.speed = 0
             frame += 15
             break
+
         frame += 1
 
+def get_around_obstacle():
+    steering_angles = donne_moi_le_steering_pour_faire_le_contournement()
+
+    for caliss_dangle in steering_angles:
+        bw.forward(frame)
+        fw.turn(caliss_dangle + (math.pi/2), frame)
+        frame+= 1
 
 def stop():
     move_at_distance(1, bw.speed > 0)
@@ -149,22 +158,14 @@ def parcours4_obstacle():
         detect_object_and_stop()
 
         if (bw.stopped()):
-            bw.speed = 0
             frame += 15
-            bw.speed = 1.5
             move_at_distance(3, False)
-            steering_angles = donne_moi_le_steering_pour_faire_le_contournement()
-
-            for caliss_dangle in steering_angles:
-                bw.speed = 1.5
-                bw.forward(frame)
-                fw.turn(caliss_dangle + (math.pi/2), frame)
-                frame+= 1
+            get_around_obstacle()
         frame += 1
 
 if __name__ == '__main__':
-    parcours1_widecurve()
+    #parcours1_widecurve()
     #parcours2_stop()
     #parcours3_moveback()
-    #parcours4_obstacle()
+    parcours4_obstacle()
 
