@@ -25,6 +25,8 @@ class Front_Wheels():
         self._steering_angle_to_global_angle(steering_angle - (np.pi/2))
         self._set_obj_rotation()
 
+    
+    # PRIVATE
     def _set_obj_rotation(self):
         CAR_OBJ.rotation_euler = [EULER_X, EULER_Y, -current_angle]
         CAR_OBJ.keyframe_insert(data_path="rotation_euler", frame = self.frame + 1)
@@ -59,6 +61,7 @@ class Back_Wheels:
         self.current_speed = -np.abs(self.current_speed)
         self._move(actual_frame)
 
+    # PRIVATE
     def _move(self, actual_frame):
         self.frame = actual_frame
         self._set_next_dist()
@@ -68,16 +71,7 @@ class Back_Wheels:
 
         # deccelerate
         if (self.should_stop):
-            if (self._is_going_backward()):
-                next_dist = last_distance + self.max_accel
-                if (next_dist >= 0):
-                    next_dist = 0
-                    self.should_stop = False
-            else:
-                next_dist = last_distance - self.max_accel
-                if (next_dist <= 0):
-                    next_dist = 0
-                    self.should_stop = False
+            next_dist = self._deccelerate_for_next_frame()
         #accelerate
         else :
             next_dist = self.current_speed / FRAME_RATE
@@ -101,7 +95,22 @@ class Back_Wheels:
     def determine_stopping_dist(self, obstacle_distance):
         if (obstacle_distance > 0 and last_distance != 0 and not self.should_stop):
             dist_to_stop = (last_distance ** 2) / (2*self.max_accel)
+
             self.should_stop = np.abs(dist_to_stop) > obstacle_distance
+
+    def _deccelerate_for_next_frame(self):
+        if (self._is_going_backward()):
+            next_dist = last_distance + self.max_accel
+            if (next_dist >= 0):
+                next_dist = 0
+                self.should_stop = False
+        else:
+            next_dist = last_distance - self.max_accel
+            if (next_dist <= 0):
+                next_dist = 0
+                self.should_stop = False
+
+        return next_dist
 
     def _is_going_backward(self):
         return self.current_speed < 0
