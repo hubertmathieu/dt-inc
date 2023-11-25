@@ -35,39 +35,45 @@ class CarController:
         global turning_angle
         
         lt_status_now = lf.read_digital()
-        print("frame:", frame, "status:", lt_status_now)
+        print("frame:", frame, "status:", lt_status_now, "turning angle:", turning_angle)
         # Angle calculate
         if	lt_status_now == [0,0,1,0,0]:
-            step = 0	
+            step = 0
         elif lt_status_now == [0,1,1,0,0] or lt_status_now == [0,0,1,1,0]:
-            step = 0.3
+            step = 2
         elif lt_status_now == [0,1,0,0,0] or lt_status_now == [0,0,0,1,0]:
-            step = 0.5
+            step = 7
         elif lt_status_now == [1,1,0,0,0] or lt_status_now == [0,0,0,1,1]:
-            step = 0.7
+            step = 10
         elif lt_status_now == [1,0,0,0,0] or lt_status_now == [0,0,0,0,1]:
-            step = 1
-        elif lt_status_now == [0,0,0,0,0]:
-            step = 1
+            step = 13
         elif lt_status_now == [1,1,1,1,1]:
             self.stop()
             return
 
         # Direction calculate
         if	lt_status_now == [0,0,1,0,0]:
-            turning_angle = 90
+            if turning_angle < 90:
+                turning_angle += 1
+            elif turning_angle > 90:
+                turning_angle -= 1
+            else:
+                turning_angle = 90
         # turn right
         elif lt_status_now in ([0,1,1,0,0],[0,1,0,0,0],[1,1,0,0,0],[1,0,0,0,0]):
-            turning_angle -= step
+            if turning_angle > 0:
+                turning_angle -= step
+            else:
+                turning_angle = 0
         # turn left
         elif lt_status_now in ([0,0,1,1,0],[0,0,0,1,0],[0,0,0,1,1],[0,0,0,0,1]):
-            turning_angle += step
+            if turning_angle < 135:
+                turning_angle += step
+            else:
+                turning_angle = 135
         #find line
         elif lt_status_now == [0,0,0,0,0]:
-            if turning_angle > 90:
-                turning_angle += step
-            elif turning_angle < 90:
-                turning_angle -= step
+            turning_angle = turning_angle
 
         fw.turn(math.radians(turning_angle), frame)
 
@@ -122,9 +128,9 @@ def init_objects(pos, rot):
 
 def parcours1_widecurve():
     global frame
-    init_objects((18,-1.9,0.75), [EULER_X, EULER_Y, -EULER_Z])
+    init_objects((18,-1.9419,0.75), [EULER_X, EULER_Y, -EULER_Z])
     frame = 15
-    bw.speed = 3
+    bw.speed = 1.5
 
     while(frame < 2000):
         bw.forward(frame)
@@ -170,8 +176,8 @@ def parcours4_obstacle():
         frame += 1
 
 if __name__ == '__main__':
-    #parcours1_widecurve()
+    parcours1_widecurve()
     #parcours2_stop()
     #parcours3_moveback()
-    parcours4_obstacle()
+    #parcours4_obstacle()
 
