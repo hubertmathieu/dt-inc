@@ -10,6 +10,7 @@ from SunFounder_PiCar_S.example.SunFounder_Line_Follower.Line_Follower import Li
 from SunFounder_PiCar.picar.back_wheels import Back_Wheels
 from SunFounder_PiCar.picar.front_wheels import Front_Wheels
 from module.us_filter import US_Filter
+from module.accelerator import Accelerator
 
 
 @dataclass
@@ -54,6 +55,7 @@ class Car:
         self._detector = Ultrasonic_Avoidance(20)
         self._detector_filter = US_Filter(64) # Taille de la fenetre
         self._line_follower = Line_Follower()
+        self._accelerator = Accelerator(0.23, 1)
 
         self._logger = CarLogger()
         self._movements_for_sample = {}
@@ -106,7 +108,8 @@ class Car:
         if(distance_from_object_cm <= 1):
             self._running = False
         else:
-            new_movement = CarMovement(0, 0)
+            next_speed = self._accelerator.speed_to_accel(self.last_speed, self.last_measurement.timestamp)
+            new_movement = CarMovement(next_speed, 0)
             self.movement = new_movement
 
         timestamp = timer()
@@ -138,7 +141,7 @@ class Car:
     
 
     def calculate_position_and_angle(self, timestamp):
-        seconds_elapsed = timestamp - self._logger.last_measurement().timestamp
+        seconds_elapsed = timestamp - self.last_measurement.timestamp
         if(self.movement.steering_angle != 0):
             turning_radius_m = (self._wheel_base / np.sin(np.abs(self.movement.steering_angle))) + (self._tire_width/2)
             turning_circumference_m = 2 * np.pi * turning_radius_m
@@ -155,8 +158,12 @@ class Car:
         delta_position_y=np.sin(self._angle)*distance_traveled
         self._position_x+=delta_position_x
         self._position_y+=delta_position_y
+
+    def last_measurement(self):
+        return self._logger.last_measurement()
         
-    
+    def last_speed(self):
+        return self._logger.last_measurement().speed
 
     def apply_car_movement(self):
         self._front_wheels.turn(np.rad2deg(- self.movement.steering_angle) + 90)
