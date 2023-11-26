@@ -2,7 +2,7 @@ import bpy
 from ir_sensor import Sensor
 from mathutils import Vector
 
-
+# Utilise cinq sensor pour les cinq capteurs
 class LineFollower:
     def __init__(self):
         self.u1 = Sensor("CAPTEUR.IR.1")

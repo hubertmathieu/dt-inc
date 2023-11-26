@@ -1,6 +1,7 @@
 import bpy
 from mathutils import Vector
 
+# Classe utilisée pour créer un objet de capteur infrarouge
 class Sensor:
     def __init__(self):
         self._sensor_name = None  # Initialize the sensor_name to None

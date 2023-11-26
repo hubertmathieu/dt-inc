@@ -29,7 +29,9 @@ ua_1 = Ultrasonic_Avoidance(CAR_NAME)
 frame = 0
 turning_angle = 90
 
+# Définit les actions du véhicule en fonction des capteurs
 class CarController:
+    # suiveur de ligne
     def follow_line(self):
         global frame
         global turning_angle
@@ -80,6 +82,7 @@ class CarController:
     def stop(self):
         self.move_at_distance(1, bw.speed > 0)
 
+    # Déplacement d'une distance connue
     def move_at_distance(self ,stopping_distance, forward=True):
         global frame
         while(1):
@@ -116,6 +119,7 @@ class CarController:
 
 car_controller = CarController()
 
+# initialisation du véhicue
 def init_objects(pos, rot):
     # init car position
     obj = bpy.data.objects[CAR_NAME]
@@ -125,7 +129,7 @@ def init_objects(pos, rot):
     obj.keyframe_insert(data_path="rotation_euler", frame = 0)
     obj = bpy.data.objects[CAR_NAME]
 
-
+# parcours avec courbes
 def parcours1_widecurve():
     global frame
     init_objects((18,-1.9419,0.75), [EULER_X, EULER_Y, -EULER_Z])
@@ -137,6 +141,7 @@ def parcours1_widecurve():
         car_controller.follow_line()
         frame += 1
 
+# parcours avec arrêt
 def parcours2_stop():
     global frame
     init_objects((-11,0,0.75), [EULER_X, EULER_Y, -EULER_Z])
@@ -150,6 +155,7 @@ def parcours2_stop():
         car_controller.follow_line()
         frame += 1
 
+# parcours avec arrêt et retour arrière
 def parcours3_moveback():
     global frame
     init_objects((0,0,0.75), [EULER_X, EULER_Y, -EULER_Z])
@@ -158,6 +164,7 @@ def parcours3_moveback():
     
     car_controller.move_at_distance(3, False)
 
+# parcours avec évitement d'obstacle
 def parcours4_obstacle():
     global frame
     init_objects((7.9,0,0.75), [EULER_X, EULER_Y, -EULER_Z])
@@ -175,6 +182,7 @@ def parcours4_obstacle():
             car_controller.get_around_obstacle()
         frame += 1
 
+# choix du parcours à réaliser, tout dépendant de la scène retirer un dièse(#) de commentaire
 if __name__ == '__main__':
     parcours1_widecurve()
     #parcours2_stop()

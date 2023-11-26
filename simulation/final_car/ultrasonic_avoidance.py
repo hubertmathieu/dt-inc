@@ -2,12 +2,13 @@ import bpy
 import math
 from mathutils import Vector
 
+# Utilise un objet d'évitement ultrasonique comme le code du robot
 class Ultrasonic_Avoidance(object):
     def __init__(self, us_sensor_name):
         self.angle = math.radians(90)
         self.us_sensor_obj = bpy.data.objects[us_sensor_name]
 
-# return distance: succès
+# return distance >= 0: succès
 # return -1 : échec
     def distance(self):
         xc,yc,zc = self.us_sensor_obj.matrix_world.translation

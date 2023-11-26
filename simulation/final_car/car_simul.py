@@ -14,6 +14,7 @@ EULER_Z = -CAR_OBJ.rotation_euler[2]
 current_angle = EULER_Z
 last_distance = 0
 
+# Classe des roues avant, ont un angle mais n'avancent pas
 class Front_Wheels():
     def __init__(self):
         self.wheelbase_m = 1.4
@@ -31,6 +32,7 @@ class Front_Wheels():
         CAR_OBJ.rotation_euler = [EULER_X, EULER_Y, -current_angle]
         CAR_OBJ.keyframe_insert(data_path="rotation_euler", frame = self.frame + 1)
 
+    # Transforme l'angle perçu de la roue en angle absolu de la scène
     def _steering_angle_to_global_angle(self, steering_angle):
         global current_angle
 
@@ -45,7 +47,7 @@ class Front_Wheels():
             else:
                 current_angle += angle_traveled_r
 
-
+# Classe des roues arrières, avancent mais n'ont pas d'angle
 class Back_Wheels:
     def __init__(self):
         self.max_accel = 0.05 * (1/FRAME_RATE)
@@ -66,6 +68,7 @@ class Back_Wheels:
         self.frame = actual_frame
         self._set_next_dist()
 
+    # Détermine le déplacement pour obtenir la prochaine keyframe de la simulation
     def _set_next_dist(self):
         global last_distance
 
