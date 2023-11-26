@@ -11,6 +11,7 @@ from SunFounder_PiCar_S.example.SunFounder_Line_Follower.Line_Follower import Li
 from SunFounder_PiCar.picar.back_wheels import Back_Wheels
 from SunFounder_PiCar.picar.front_wheels import Front_Wheels
 from module.us_filter import US_Filter
+from module.angle_calculator import Angle_Calculator
 from module.accelerator import Accelerator
 
 # CONSTANTS
@@ -42,7 +43,7 @@ class CarMeasurement:
 @dataclass
 class CarMovement:
     speed: float # in meter per second
-    steering_angle: float # in degrees or radian, i'm not sure yet
+    steering_angle: float # in radian
 
 
 class Car:
@@ -62,6 +63,7 @@ class Car:
         self._detector = Ultrasonic_Avoidance(20)
         self._detector_filter = US_Filter(64) # Taille de la fenetre
         self._line_follower = Line_Follower()
+        self._angle_calculator = Angle_Calculator()
         self._accelerator = Accelerator(MAX_ACCEL, MAX_SPEED, INTERVAL)
 
         self._logger = CarLogger()
@@ -93,10 +95,10 @@ class Car:
 
     @movement.setter
     def movement(self, new_movement:CarMovement):
-        # assert round(new_movement.speed, 4) <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
-        # assert round(new_movement.speed, 4) >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
-        # assert new_movement.steering_angle <= 45, f'Steering angle should not be higher than 45°, found {new_movement.steering_angle}'
-        # assert new_movement.steering_angle >= -45, f'Steering angle should not be lower than -45°, found {new_movement.steering_angle}'
+        #assert new_movement.speed <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
+        #assert new_movement.speed >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
+        #assert new_movement.steering_angle <= 45, f'Steering angle should not be higher than 45°, found {new_movement.steering_angle}'
+        #assert new_movement.steering_angle >= -45, f'Steering angle should not be lower than -45°, found {new_movement.steering_angle}'
         self._movement = new_movement
         self.apply_car_movement()
 
@@ -105,7 +107,8 @@ class Car:
         self._running = True
         while self._running:
             try:
-                self.loop()
+                #self.loop()
+                self.test_line_follower()
             except KeyboardInterrupt:
                 self.stop()
         self.stop()
@@ -116,6 +119,26 @@ class Car:
         self.movement = CarMovement(0, 0)
         self._logger.dump_to_file()
 
+
+    def test_line_follower(self):
+        ir_status = self._line_follower.read_digital()
+        last_steering_angle = self._logger.last_measurement().steering_angle
+        new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
+        
+        self.movement = CarMovement(0.1, new_angle)
+        
+        timestamp = timer()
+        
+        acceleration = self.calculate_acceleration(timestamp)
+        self.calculate_position_and_angle(timestamp)
+        self._logger.add(CarMeasurement(timestamp=timestamp,
+                                       position_x=self._position_x,
+                                       position_y=self._position_y,
+                                       angle = self._angle,
+                                       speed=self.movement.speed,
+                                       acceleration=acceleration,
+                                       steering_angle=self.movement.steering_angle,
+                                       distance_from_object_cm=0))
         
     def loop(self):
         # distance_from_object_cm = self.get_distance_from_object()
@@ -187,15 +210,19 @@ class Car:
         return self.last_measurement().speed
 
     def apply_car_movement(self):
-        self._front_wheels.turn(np.rad2deg(- self.movement.steering_angle) + 90)
         if self.movement.speed < 0:
             self._back_wheels.forward() # Forward et Backward sont inversés
         else:
             self._back_wheels.backward()
             
-        speed = self._speed_to_engine(np.abs(self.movement.speed))
-        self._back_wheels.speed = np.rint(speed)
-
+        speed_right = self._speed_to_engine(np.abs(self.movement.speed))
+        speed_left = self._speed_to_engine(np.abs(self.movement.speed))
+        
+        self._front_wheels.turn(np.rad2deg(- self.movement.steering_angle) + 90)
+            
+        self._back_wheels.speed_left = np.rint(speed_left)
+        self._back_wheels.speed_right = np.rint(speed_right)
+        
 
     def speed_m_per_s_to_motor_percentage(self, speed_m_per_s):
         return 1/self.speed_fitter_function(speed_m_per_s)
