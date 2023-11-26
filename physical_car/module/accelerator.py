@@ -29,6 +29,8 @@ class Accelerator:
             next_speed = last_speed + accel
             if next_speed >= 0:
                 return 0
+
+        return next_speed
     @property
     def max_speed(self):
         return self._max_speed

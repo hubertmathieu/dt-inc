@@ -118,12 +118,12 @@ class Car:
 
         
     def loop(self):
-        distance_from_object_cm = self.get_distance_from_object()
-
+        # distance_from_object_cm = self.get_distance_from_object()
+        distance_from_object_cm = 100
         if(distance_from_object_cm <= 1):
             self._running = False
         else:
-            next_speed = self._accelerator.speed_to_accel(self.last_speed(), INTERVAL)
+            next_speed = self._accelerator.speed_to_accel(self.last_speed())
             new_movement = CarMovement(next_speed, 0)
             self.movement = new_movement
 
