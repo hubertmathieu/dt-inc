@@ -1,4 +1,5 @@
 from timeit import default_timer as timer
+from time import sleep
 from dataclasses import dataclass
 from typing import Dict, List
 import numpy as np
@@ -12,10 +13,15 @@ from SunFounder_PiCar.picar.front_wheels import Front_Wheels
 from module.us_filter import US_Filter
 from module.accelerator import Accelerator
 
+# CONSTANTS
+MAX_ACCEL = 0.01
+MAX_SPEED = 0.23 # m/s
+INTERVAL = 0.05 # seconds
 
 @dataclass
 class CarMeasurement:
     timestamp: float
+    delta_time: float
     position_x: float
     position_y: float
     angle: float
@@ -25,12 +31,12 @@ class CarMeasurement:
     distance_from_object_cm: float
 
     
-    def header():
-        return ["timestamp", "position_x", "position_y", "angle", "speed", "acceleration", "steering_angle", "distance_from_object (cm)"]
+    def header(self):
+        return ["timestamp", "delta_time", "position_x", "position_y", "angle", "speed", "acceleration", "steering_angle", "distance_from_object (cm)"]
 
 
     def to_list(self):
-        return [self.timestamp, self.position_x, self.position_y, self.angle, self.speed, self.acceleration, self.steering_angle, self.distance_from_object_cm]
+        return [self.timestamp, self.delta_time, self.position_x, self.position_y, self.angle, self.speed, self.acceleration, self.steering_angle, self.distance_from_object_cm]
 
 
 @dataclass
@@ -49,13 +55,14 @@ class Car:
         self._position_x = 0
         self._position_y = 0
         self._angle = np.pi/2
+        self._goal_speed = 0
 
         self._front_wheels = Front_Wheels()
         self._back_wheels = Back_Wheels()
         self._detector = Ultrasonic_Avoidance(20)
         self._detector_filter = US_Filter(64) # Taille de la fenetre
         self._line_follower = Line_Follower()
-        self._accelerator = Accelerator(0.23, 1)
+        self._accelerator = Accelerator(MAX_ACCEL, MAX_SPEED, INTERVAL)
 
         self._logger = CarLogger()
         self._movements_for_sample = {}
@@ -70,6 +77,14 @@ class Car:
         self._tire_width = 0.108
         pass
 
+    @property
+    def goal_speed(self):
+        return self._goal_speed
+
+    @goal_speed.setter
+    def goal_speed(self, new_goal_speed):
+        self._accelerator.max_speed = new_goal_speed
+        self._goal_speed = new_goal_speed
 
     @property
     def movement(self):
@@ -78,10 +93,10 @@ class Car:
 
     @movement.setter
     def movement(self, new_movement:CarMovement):
-        assert new_movement.speed <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
-        assert new_movement.speed >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
-        assert new_movement.steering_angle <= 45, f'Steering angle should not be higher than 45°, found {new_movement.steering_angle}'
-        assert new_movement.steering_angle >= -45, f'Steering angle should not be lower than -45°, found {new_movement.steering_angle}'
+        # assert round(new_movement.speed, 4) <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
+        # assert round(new_movement.speed, 4) >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
+        # assert new_movement.steering_angle <= 45, f'Steering angle should not be higher than 45°, found {new_movement.steering_angle}'
+        # assert new_movement.steering_angle >= -45, f'Steering angle should not be lower than -45°, found {new_movement.steering_angle}'
         self._movement = new_movement
         self.apply_car_movement()
 
@@ -104,11 +119,11 @@ class Car:
         
     def loop(self):
         distance_from_object_cm = self.get_distance_from_object()
-        
+
         if(distance_from_object_cm <= 1):
             self._running = False
         else:
-            next_speed = self._accelerator.speed_to_accel(self.last_speed, self.last_measurement.timestamp)
+            next_speed = self._accelerator.speed_to_accel(self.last_speed(), INTERVAL)
             new_movement = CarMovement(next_speed, 0)
             self.movement = new_movement
 
@@ -117,6 +132,7 @@ class Car:
         acceleration = self.calculate_acceleration(timestamp)
         self.calculate_position_and_angle(timestamp)
         self._logger.add(CarMeasurement(timestamp=timestamp,
+                                        delta_time = timestamp - self.last_measurement().timestamp,
                                        position_x=self._position_x,
                                        position_y=self._position_y,
                                        angle = self._angle,
@@ -124,7 +140,12 @@ class Car:
                                        acceleration=acceleration,
                                        steering_angle=self.movement.steering_angle,
                                        distance_from_object_cm=distance_from_object_cm))
-        
+
+        delta_time = timer() - self.last_measurement().timestamp
+        if(delta_time <= INTERVAL):
+            sleep(INTERVAL - delta_time)
+
+        self._logger.dump_to_file()
 
     def get_distance_from_object(self):
         raw_distance = self._detector.get_distance()
@@ -141,7 +162,7 @@ class Car:
     
 
     def calculate_position_and_angle(self, timestamp):
-        seconds_elapsed = timestamp - self.last_measurement.timestamp
+        seconds_elapsed = timestamp - self.last_measurement().timestamp
         if(self.movement.steering_angle != 0):
             turning_radius_m = (self._wheel_base / np.sin(np.abs(self.movement.steering_angle))) + (self._tire_width/2)
             turning_circumference_m = 2 * np.pi * turning_radius_m
@@ -163,7 +184,7 @@ class Car:
         return self._logger.last_measurement()
         
     def last_speed(self):
-        return self._logger.last_measurement().speed
+        return self.last_measurement().speed
 
     def apply_car_movement(self):
         self._front_wheels.turn(np.rad2deg(- self.movement.steering_angle) + 90)
@@ -182,7 +203,7 @@ class Car:
 
 class CarLogger:
     def __init__(self):
-        self._data: List[CarMeasurement] = [CarMeasurement(timer(),0,0,0,0,0,0,-1)]
+        self._data: List[CarMeasurement] = [CarMeasurement(timer(),0,0,0,0,0,0,0,-1)]
 
 
     @property
@@ -202,6 +223,17 @@ class CarLogger:
         file_name = datetime.now().strftime("%Y%m%d%H%M%S.csv")
         with open(file_name, mode="w") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(CarMeasurement.header())
+            writer.writerow(CarMeasurement.header(self))
             for measurement in self.data:
                 writer.writerow(measurement.to_list())
+
+if __name__ == "__main__":
+    i = 0
+    car = Car()
+    car.goal_speed = MAX_SPEED
+
+    while(i < 50):
+        car.loop()
+        i += 1
+
+

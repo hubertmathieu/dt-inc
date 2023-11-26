@@ -2,13 +2,13 @@ import numpy as np
 
 class Accelerator:
 
-    def __init__(self, accel, speed):
+    def __init__(self, accel, speed, interval):
         self._max_accel = accel
         self._max_speed = speed
+        self._interval = interval
 
-    def speed_to_accel(self, last_speed, interval, forward=False):
-        # ** comment savoir le temps que la loop présente se termine
-        accel = (self._max_accel / interval)
+    def speed_to_accel(self, last_speed, forward=True):
+        accel = self._max_accel * self._interval
 
         next_speed = last_speed + accel if forward else last_speed - accel
 
@@ -17,9 +17,9 @@ class Accelerator:
 
         return next_speed
 
-    def speed_to_deccel(self, last_speed, interval, forward=False):
+    def speed_to_deccel(self, last_speed, forward=False):
 
-        accel = (self._max_accel / interval)
+        accel = self._max_accel * self._interval
 
         if forward:
             next_speed = last_speed - accel
@@ -34,7 +34,7 @@ class Accelerator:
         return self._max_speed
 
     @max_speed.setter
-    def max_accel(self, value):
+    def max_speed(self, value):
         self._max_speed = value
 
     @property
