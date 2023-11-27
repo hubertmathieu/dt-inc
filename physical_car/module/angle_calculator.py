@@ -1,24 +1,42 @@
 import numpy as np
- 
+
+# Constante
 X_SMALL = 0.1
 SMALL = 0.25
 MEDIUM = 0.5
 LARGE = 0.75
 X_LARGE = 1.25
 
+max_off_track_count = 40
+
 class Angle_Calculator:
     
     def __init__(self):
         self._ir_status = [0, 0, 0, 0, 0]
         self._step = 0
+        self._off_track_count = 0
+    
+
+    def is_off_track(self):
+        """
+        Vérifie lorsque la voiture a perdu la ligne depuis un moment
+
+        :return: boolean
+        """
+        if self._off_track_count >= max_off_track_count:
+            self._off_track_count = 0
+            return True
+        else:
+            return False
+    
     
     def get_steering_angle(self, new_ir_status, steering_angle):
         """
-        Check the status of the ir sensor and calculate the new steering angle for the car 
+        Utilise le nouveau et le dernier status des capteur pour ajuster l'angle de la direction 
 
-        :new_ir_status: array of 5 value that represent each ir sensor
-        :steering_angle: steering angle of the car at that moment (in radian)
-        :return: steering_angle for the car to turn
+        :new_ir_status: tableau de 5 valeurs (0 ou 1) pour chaque capteur ir
+        :steering_angle: angle de la direction en radians
+        :return: nouvelle angle de la direction en radians
         """
         print("IR Status:", new_ir_status)
         steering_angle = np.rad2deg(steering_angle)
@@ -57,6 +75,7 @@ class Angle_Calculator:
         elif new_ir_status == [0,0,0,0,1]:
             self._step = -LARGE
         elif new_ir_status == [0,0,0,0,0]:
+            self._off_track_count += 1
             if self._ir_status[0] == 1:
                 self._step = X_LARGE
             elif self._ir_status[4] == 1:
