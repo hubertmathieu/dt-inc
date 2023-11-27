@@ -61,7 +61,7 @@ class Car:
         self._position_x = 0
         self._position_y = 0
         self._angle = np.pi/2
-        self._goal_speed = 0
+        self._goal_speed = MAX_SPEED
 
         self._front_wheels = Front_Wheels()
         self._back_wheels = Back_Wheels()
@@ -70,7 +70,7 @@ class Car:
         self._line_follower = Line_Follower()
         
         self._angle_calculator = Angle_Calculator()
-        self._accelerator = Accelerator(MAX_ACCEL, MAX_SPEED, INTERVAL)
+        self._accelerator = Accelerator(MAX_ACCEL, self._goal_speed, INTERVAL, MAX_SPEED)
         
         default_object_size = 0.18 # Taille par défaut que le char va éviter (meters)
         self._circumvention_module = Circumvention(self._wheel_base, self._tire_width, default_object_size)
@@ -92,7 +92,7 @@ class Car:
 
     @goal_speed.setter
     def goal_speed(self, new_goal_speed):
-        self._accelerator.max_speed = new_goal_speed
+        self._accelerator.goal_speed = new_goal_speed
         self._goal_speed = new_goal_speed
 
     @property
@@ -112,8 +112,8 @@ class Car:
         self._running = True
         while self._running:
             try:
-                #self.loop()
-                self.test_line_follower()
+                self.loop()
+                #self.test_line_follower()
             except KeyboardInterrupt:
                 self.stop()
         self.stop()
@@ -158,10 +158,12 @@ class Car:
         Boucle générale
         """
         if not self._is_bypassed:
-            if(distance_from_object_cm <= 50 and self._logger.last_measurement().speed != 0):
-                self._future_movements = [CarMovement(self._logger.last_measurement().speed, angle) for angle in self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1)]
-                print(len(self._future_movements))
-                self._is_bypassed = True
+            if(distance_from_object_cm <= 50):
+                if (self._accelerator.determine_stopping_dist(distance_from_object_cm, self.last_speed())):
+                    # self._future_movements = [CarMovement(self.last_speed(), angle) for angle in self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1)]
+                    # self._is_bypassed = True
+                    pass
+                pass
             else:
                 next_speed = self._accelerator.speed_to_accel(self.last_speed())
                 new_movement = CarMovement(next_speed, 0)
