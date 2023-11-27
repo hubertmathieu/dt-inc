@@ -12,7 +12,7 @@ from line_follower import LineFollower
 from car_simul import Back_Wheels
 from car_simul import Front_Wheels
 from ultrasonic_avoidance import Ultrasonic_Avoidance
-from define_angle_when_object_detecteddd import donne_moi_le_steering_pour_faire_le_contournement
+from simulation.final_car.define_angle_when_object_detected import steering_for_circumvention
 
 # CONSTANTE
 CAR_NAME = "body_high"
@@ -108,11 +108,11 @@ class CarController:
 
     def get_around_obstacle(self):
         global frame
-        steering_angles = donne_moi_le_steering_pour_faire_le_contournement()
+        steering_angles = steering_for_circumvention()
 
-        for caliss_dangle in steering_angles:
+        for angle in steering_angles:
             bw.forward(frame)
-            fw.turn(caliss_dangle + (math.pi/2), frame)
+            fw.turn(angle + (math.pi/2), frame)
             frame+= 1
 
 

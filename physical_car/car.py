@@ -5,6 +5,7 @@ from typing import Dict, List
 import numpy as np
 import csv
 from datetime import datetime
+from time import sleep
 
 from SunFounder_PiCar_S.example.SunFounder_Ultrasonic_Avoidance.Ultrasonic_Avoidance import Ultrasonic_Avoidance
 from SunFounder_PiCar_S.example.SunFounder_Line_Follower.Line_Follower import Line_Follower
@@ -13,6 +14,7 @@ from SunFounder_PiCar.picar.front_wheels import Front_Wheels
 from module.us_filter import US_Filter
 from module.angle_calculator import Angle_Calculator
 from module.accelerator import Accelerator
+from module.circumvention import Circumvention
 
 # CONSTANTS
 MAX_ACCEL = 0.01
@@ -52,6 +54,9 @@ class Car:
     def __init__(self):
         self._running = False
         self._movement = CarMovement(0, 0)
+        
+        self._wheel_base = 0.14
+        self._tire_width = 0.108
 
         self._position_x = 0
         self._position_y = 0
@@ -61,23 +66,25 @@ class Car:
         self._front_wheels = Front_Wheels()
         self._back_wheels = Back_Wheels()
         self._detector = Ultrasonic_Avoidance(20)
-        self._detector_filter = US_Filter(64) # Taille de la fenetre
+        self._detector_filter = US_Filter(5) # Taille de la fenêtre
         self._line_follower = Line_Follower()
+        
         self._angle_calculator = Angle_Calculator()
         self._accelerator = Accelerator(MAX_ACCEL, MAX_SPEED, INTERVAL)
+        
+        default_object_size = 0.18 # Taille par défaut que le char va éviter (meters)
+        self._circumvention_module = Circumvention(self._wheel_base, self._tire_width, default_object_size)
 
         self._logger = CarLogger()
-        self._movements_for_sample = {}
+        self._future_movements = []
 
         self._engine_input_to_speed_coeffs = [-9.99328429e-10, -1.56940772e-08,  2.36553357e-05,  1.11620286e-03, -1.72643141e-04]
         self._speed_to_engine_input_coeffs = [-1.13689793e+04, 1.19347114e+04, -3.36017736e+03,  7.04488298e+02, 1.67142858e-01]    
         self._engine_to_speed = np.poly1d(self._engine_input_to_speed_coeffs)
         self._speed_to_engine = np.poly1d(self._speed_to_engine_input_coeffs)
+        self._is_bypassed = False
 
-
-        self._wheel_base = 0.14
-        self._tire_width = 0.108
-        pass
+        self._sampling_time = 0.1
 
     @property
     def goal_speed(self):
@@ -95,10 +102,8 @@ class Car:
 
     @movement.setter
     def movement(self, new_movement:CarMovement):
-        #assert new_movement.speed <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
-        #assert new_movement.speed >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
-        #assert new_movement.steering_angle <= 45, f'Steering angle should not be higher than 45°, found {new_movement.steering_angle}'
-        #assert new_movement.steering_angle >= -45, f'Steering angle should not be lower than -45°, found {new_movement.steering_angle}'
+        assert new_movement.speed <= 0.23, f'Speed should not be higher than 0.23, found {new_movement.speed}'
+        assert new_movement.speed >= -0.23, f'Speed should not be lower than -0.23, found {new_movement.speed}'
         self._movement = new_movement
         self.apply_car_movement()
 
@@ -129,8 +134,65 @@ class Car:
         
         timestamp = timer()
         
+    def loop(self):
+        """
+        Mouvement par défaut
+        """
+        new_movement = self.movement
+
+
+        """
+        Données des senseurs
+        """
+        distance_from_object_cm = self.get_distance_from_object()
+
+
+        """
+        Boucle alternative
+        """
+        if self._is_bypassed:
+            new_movement = self.bypassed_logic()
+        
+
+        """
+        Boucle générale
+        """
+        if not self._is_bypassed:
+            if(distance_from_object_cm <= 50 and self._logger.last_measurement().speed != 0):
+                self._future_movements = [CarMovement(self._logger.last_measurement().speed, angle) for angle in self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1)]
+                print(len(self._future_movements))
+                self._is_bypassed = True
+            else:
+                next_speed = self._accelerator.speed_to_accel(self.last_speed())
+                new_movement = CarMovement(next_speed, 0)
+        
+        self.movement = new_movement
+        
+
+        """
+        Fréquences d'échantillonnages uniformes
+        """
+        delta_time = timer() - self._logger.last_measurement().timestamp
+        if(delta_time < self._sampling_time):
+            sleep(self._sampling_time - delta_time)
+
+
+        """
+        Temps de la boucle
+        """
+        timestamp = timer()
+
+
+        """
+        Calculation nécessitant le temps
+        """
         acceleration = self.calculate_acceleration(timestamp)
         self.calculate_position_and_angle(timestamp)
+
+
+        """
+        Journalisation
+        """
         self._logger.add(CarMeasurement(timestamp=timestamp,
                                        position_x=self._position_x,
                                        position_y=self._position_y,
@@ -140,35 +202,15 @@ class Car:
                                        steering_angle=self.movement.steering_angle,
                                        distance_from_object_cm=0))
         
-    def loop(self):
-        # distance_from_object_cm = self.get_distance_from_object()
-        distance_from_object_cm = 100
-        if(distance_from_object_cm <= 1):
-            self._running = False
+
+    def bypassed_logic(self):
+        if(len(self._future_movements) != 0):
+            new_movement = self._future_movements.pop(0)
         else:
-            next_speed = self._accelerator.speed_to_accel(self.last_speed())
-            new_movement = CarMovement(next_speed, 0)
-            self.movement = new_movement
+            self._is_bypassed = False
+            return self._logger.last_measurement()
+        return new_movement
 
-        timestamp = timer()
-        
-        acceleration = self.calculate_acceleration(timestamp)
-        self.calculate_position_and_angle(timestamp)
-        self._logger.add(CarMeasurement(timestamp=timestamp,
-                                        delta_time = timestamp - self.last_measurement().timestamp,
-                                       position_x=self._position_x,
-                                       position_y=self._position_y,
-                                       angle = self._angle,
-                                       speed=self.movement.speed,
-                                       acceleration=acceleration,
-                                       steering_angle=self.movement.steering_angle,
-                                       distance_from_object_cm=distance_from_object_cm))
-
-        delta_time = timer() - self.last_measurement().timestamp
-        if(delta_time <= INTERVAL):
-            sleep(INTERVAL - delta_time)
-
-        self._logger.dump_to_file()
 
     def get_distance_from_object(self):
         raw_distance = self._detector.get_distance()
@@ -247,7 +289,7 @@ class CarLogger:
     
 
     def dump_to_file(self):
-        file_name = datetime.now().strftime("%Y%m%d%H%M%S.csv")
+        file_name = f"data/{datetime.now().strftime('%Y%m%d%H%M%S.csv')}"
         with open(file_name, mode="w") as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(CarMeasurement.header(self))

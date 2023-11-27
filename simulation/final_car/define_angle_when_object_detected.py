@@ -4,28 +4,36 @@ wheelbase_m = 1.4
 tire_width_m = 1.08
 
 
-def define_position_needed_to_contourne_object(distance_avant_objet, distance_objet_apres, distance_qu_on_contourne_m,
+"""
+Défini une fonction gaussienne et retourne les positions X et Y
+"""
+def define_position_for_circumvention(distance_avant_objet, distance_objet_apres, distance_qu_on_contourne_m,
                                                sampling_time, vitesse):
-    # using a gaussian to define a relative x,y position function
+    # Utilise une gausienne pour définir les positions x et y relatives du véhicule
     overall_distance_travelled_m = distance_avant_objet + distance_objet_apres
     seconds_travelled = overall_distance_travelled_m / vitesse
 
     a = distance_qu_on_contourne_m
     b = distance_avant_objet
-    c = distance_avant_objet / 5
+    c = distance_avant_objet / 5 # ce coefficient est heuristique
 
+    # position en Y (linéaire)
     positions_y_m = np.linspace(0, overall_distance_travelled_m, int(seconds_travelled / sampling_time))
+    # position en X (gaussienne)
     position_x_m = a * np.exp(-(((positions_y_m - b) ** 2) / ((2 * c) ** 2)))
     return position_x_m, positions_y_m
 
-
-def donne_moi_le_steering_pour_faire_le_contournement(distance_de_objet_avant=6, distance_de_objet_cote=-1.8,
-                                                      sampling_time=(1 / 24), vitesse=1.5):
-    relative_position_x, _ = define_position_needed_to_contourne_object(distance_de_objet_avant,
-                                                                        distance_de_objet_avant, distance_de_objet_cote,
-                                                                        sampling_time, vitesse)
+"""
+Permet de déterminer les angles de braquage pour effectuer un contournement, en suivant une gaussienne
+"""
+def steering_for_circumvention(distance_de_objet_avant=6, distance_de_objet_cote=-1.8, sampling_time=(1 / 24), vitesse=1.5):
+    relative_position_x, _ = define_position_for_circumvention(distance_de_objet_avant,
+                                                                distance_de_objet_avant,
+                                                                distance_de_objet_cote,
+                                                                sampling_time, vitesse)
 
     distance_travelled = vitesse * sampling_time
+
     delta_position_x = np.diff(relative_position_x)
 
     current_angle = -np.arcsin(delta_position_x / distance_travelled)
@@ -41,9 +49,14 @@ def donne_moi_le_steering_pour_faire_le_contournement(distance_de_objet_avant=6,
     steering_angle = np.arcsin(stuff_that_goes_inside_arcsin)
 
     trois_quart = int(len(steering_angle) * 0.5)
+
     error = np.cumsum(steering_angle)[-1]
+
     minimum = np.min(steering_angle)
+    
+    # Petit fix pour s'assurer de respecter l'angle totale de 0 degrée
     tricherie = [minimum for _ in range(int(error / (np.abs(minimum)) + 4))]
+
     steering_angle = np.concatenate([steering_angle[:trois_quart], tricherie, steering_angle[trois_quart:]])
 
     return steering_angle
@@ -51,7 +64,7 @@ def donne_moi_le_steering_pour_faire_le_contournement(distance_de_objet_avant=6,
 
 def main():
     import matplotlib.pyplot as plt
-    steering = donne_moi_le_steering_pour_faire_le_contournement()
+    steering = steering_for_circumvention()
     plt.plot(np.linspace(0, len(steering) - 1, len(steering)), steering)
     plt.plot(np.linspace(0, len(steering) - 1, len(steering)), np.cumsum(steering))
     plt.show()
