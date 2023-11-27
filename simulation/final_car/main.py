@@ -3,16 +3,16 @@ import sys
 import math
 
 
-# Make python file in the main directory accessible for imports
+# Permet à blender de détecter l'importation de fichgier externe en ajustant le path
 blend_file_directory = bpy.path.abspath('//')
 sys.path.append(blend_file_directory)
 
-# Imports all the neccessary python file
+# Importer les classes importantes
 from line_follower import LineFollower
 from car_simul import Back_Wheels
 from car_simul import Front_Wheels
 from ultrasonic_avoidance import Ultrasonic_Avoidance
-from define_angle_when_object_detecteddd import donne_moi_le_steering_pour_faire_le_contournement
+from circumvention import Circumvention
 
 # CONSTANTE
 CAR_NAME = "body_high"
@@ -20,11 +20,12 @@ EULER_X = math.radians(-90)
 EULER_Y = math.radians(0)
 EULER_Z = math.radians(-90)
 
-# Class object from other file
+# Objet de classe venant de fichier externe
 lf = LineFollower()
 fw = Front_Wheels()
 bw = Back_Wheels()
 ua_1 = Ultrasonic_Avoidance(CAR_NAME)
+circ = Circumvention()
 
 frame = 0
 turning_angle = 90
@@ -38,7 +39,7 @@ class CarController:
         
         lt_status_now = lf.read_digital()
         print("frame:", frame, "status:", lt_status_now, "turning angle:", turning_angle)
-        # Angle calculate
+        # Calculer l'angle selon le status
         if	lt_status_now == [0,0,1,0,0]:
             step = 0
         elif lt_status_now == [0,1,1,0,0] or lt_status_now == [0,0,1,1,0]:
@@ -53,7 +54,7 @@ class CarController:
             self.stop()
             return
 
-        # Direction calculate
+        # Calcule de direction (gauche ou droit)
         if	lt_status_now == [0,0,1,0,0]:
             if turning_angle < 90:
                 turning_angle += 1
@@ -61,19 +62,19 @@ class CarController:
                 turning_angle -= 1
             else:
                 turning_angle = 90
-        # turn right
+        # tourne vers la droite
         elif lt_status_now in ([0,1,1,0,0],[0,1,0,0,0],[1,1,0,0,0],[1,0,0,0,0]):
             if turning_angle > 0:
                 turning_angle -= step
             else:
                 turning_angle = 0
-        # turn left
+        # tourne vers la gauche
         elif lt_status_now in ([0,0,1,1,0],[0,0,0,1,0],[0,0,0,1,1],[0,0,0,0,1]):
             if turning_angle < 135:
                 turning_angle += step
             else:
                 turning_angle = 135
-        #find line
+        # trouver la ligne
         elif lt_status_now == [0,0,0,0,0]:
             turning_angle = turning_angle
 
@@ -108,11 +109,11 @@ class CarController:
 
     def get_around_obstacle(self):
         global frame
-        steering_angles = donne_moi_le_steering_pour_faire_le_contournement()
+        steering_angles = circ.steering_for_circumvention()
 
-        for caliss_dangle in steering_angles:
+        for angle in steering_angles:
             bw.forward(frame)
-            fw.turn(caliss_dangle + (math.pi/2), frame)
+            fw.turn(angle + (math.pi/2), frame)
             frame+= 1
 
 

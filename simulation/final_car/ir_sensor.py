@@ -2,39 +2,37 @@ import bpy
 from mathutils import Vector
 
 # Classe utilisée pour créer un objet de capteur infrarouge
-class Sensor:
-    def __init__(self):
-        self._sensor_name = None  # Initialize the sensor_name to None
+class Ir_Sensor:
 
     def __init__(self, new_name):
         self._sensor_name = new_name
 
-    # Getter method for sensor_name
+    # Retourne le nom du capteur
     def get_sensor_name(self):
         return self._sensor_name
 
-    # Setter method for sensor_name
+    # Initialise le nouveau nom du capteur
     def set_sensor_name(self, new_name):
         if isinstance(new_name, str):
             self._sensor_name = new_name
         else:
             print("Invalid sensor name. Please provide a valid string.")
     
-    # Raycast from the sensors position to detect any object in the -Z direction
-    # The function returns the rgba color of the object detected
+    # La fonction utilise le raycast, un vecteur qui pointe vers -Z. Le vecteur retourne les données lorsqu'un object est détecté
+    # La fonction retourne la couleur RGB de l'objet
     def detect_color(self):
-        # Get sensor by name and get pcb_ir location (parent object)
+        # Get le capteur dans blender en fonction du nom
         sensor = bpy.data.objects.get(self._sensor_name)
         
-        # Create direction for the raycast and the origin from where the raycast start
+        # Créer une direction pour le vecteur et le point d'origine il commence
         ray_direction = Vector((0, 0, -1))
         ray_origin = sensor.matrix_world.translation + sensor.dimensions[2] * ray_direction
         
-        # Scene raycast
+        # Applique le raycast depuis la scene principal blender
         depsgraph = bpy.context.evaluated_depsgraph_get()
         result, location, normal, index, object, matrix = bpy.context.scene.ray_cast(depsgraph, ray_origin, ray_direction)
         
-        # If raycast hit something, returns color of the object detected
+        # Si un objet est détecté, retourne la couleur
         if result:
             r = object.data.materials[0].diffuse_color[0]
             g = object.data.materials[0].diffuse_color[1]
