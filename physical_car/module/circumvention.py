@@ -6,6 +6,9 @@ class Circumvention:
         self._tirewidth_m = tire_width_m
         self._default_circumvention_distance = default_object_size
 
+    """
+    Permet de déterminer les angles de braquage pour effectuer un contournement, en suivant une gaussienne
+    """
     def steering_for_circumvention(self, distance_from_object, sampling_time, speed, circumvention_distance=None):
         if circumvention_distance == None:
             circumvention_distance = self._default_circumvention_distance
@@ -31,15 +34,19 @@ class Circumvention:
         steering_angle = np.concatenate([steering_angle[20:end_of_gaussian], time_to_go_linear])
         return steering_angle
 
+
+    """
+    Défini une fonction gaussienne et retourne les positions X et Y
+    """
     def define_position_needed(self, distance_from_object, circumvention_distance, sampling_time, speed):
         overall_distance_travelled_m = distance_from_object * 2
         seconds_travelled = overall_distance_travelled_m / speed
 
         a = circumvention_distance
         b = distance_from_object
-        c = distance_from_object / 5 # random constant
+        c = distance_from_object / 5 # constante arbitraire
 
-        # using a gaussian to define a relative x,y position function
+        # Utilisation d'une gaussienne
         positions_y_m = np.linspace(0,overall_distance_travelled_m, int(seconds_travelled/sampling_time))
         position_x_m = a * np.exp(-(((positions_y_m-b)**2) / ((2*c)**2)))
 
