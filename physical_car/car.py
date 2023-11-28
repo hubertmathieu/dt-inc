@@ -7,10 +7,10 @@ import csv
 from datetime import datetime
 from time import sleep
 
-from SunFounder_PiCar_S.example.SunFounder_Ultrasonic_Avoidance.Ultrasonic_Avoidance import Ultrasonic_Avoidance
-from SunFounder_PiCar_S.example.SunFounder_Line_Follower.Line_Follower import Line_Follower
-from SunFounder_PiCar.picar.back_wheels import Back_Wheels
-from SunFounder_PiCar.picar.front_wheels import Front_Wheels
+from SunFounder_Module.picar_s.Ultrasonic_Avoidance import Ultrasonic_Avoidance
+from SunFounder_Module.picar_s.Line_Follower import Line_Follower
+from SunFounder_Module.picar.back_wheels import Back_Wheels
+from SunFounder_Module.picar.front_wheels import Front_Wheels
 from module.us_filter import US_Filter
 from module.angle_calculator import Angle_Calculator
 from module.accelerator import Accelerator
