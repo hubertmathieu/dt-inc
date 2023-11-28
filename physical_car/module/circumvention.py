@@ -34,8 +34,8 @@ class Circumvention:
         error = np.cumsum(steering_angle)[-1]
         minimum = np.min(steering_angle)
         print(minimum)
-        error_corrector = [minimum for _ in range (int(error/(np.abs(minimum))))]
-        steering_angle = np.concatenate([steering_angle[gaussian_to_truncate:moitie], error_corrector, steering_angle[moitie:-gaussian_to_truncate]])
+        error_corrector = [minimum for _ in range (int(error/(np.abs(minimum)))+7)]
+        steering_angle = np.concatenate([steering_angle[gaussian_to_truncate:moitie], error_corrector])
 
         return steering_angle
 

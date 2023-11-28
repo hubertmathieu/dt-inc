@@ -1,11 +1,17 @@
 import numpy as np
 
 # Constante
-X_SMALL = 0.1
-SMALL = 0.25
-MEDIUM = 0.5
-LARGE = 0.75
-X_LARGE = 1.25
+XS_MAX_ANGLE = 5
+S_MAX_ANGLE = 10
+M_MAX_ANGLE = 20
+L_MAX_ANGLE = 30
+XL_MAX_ANGLE = 45
+
+X_SMALL = 1
+SMALL = 2
+MEDIUM = 3
+LARGE = 5
+X_LARGE = 10
 
 max_off_track_count = 40
 
@@ -13,6 +19,7 @@ class Angle_Calculator:
     
     def __init__(self):
         self._ir_status = [0, 0, 0, 0, 0]
+        self._max_angle = 0
         self._step = 0
         self._off_track_count = 0
     
@@ -59,36 +66,46 @@ class Angle_Calculator:
             elif steering_angle > 3:
                 self._step = -X_SMALL
         elif new_ir_status == [0,1,1,0,0]:
+            self._max_angle = XS_MAX_ANGLE
             self._step = X_SMALL
         elif new_ir_status == [0,1,0,0,0]:
+            self._max_angle = S_MAX_ANGLE
             self._step = SMALL
         elif new_ir_status == [1,1,0,0,0]:
+            self._max_angle = M_MAX_ANGLE
             self._step = MEDIUM
         elif new_ir_status == [1,0,0,0,0]:
+            self._max_angle = L_MAX_ANGLE
             self._step = LARGE
         elif new_ir_status == [0,0,1,1,0]:
+            self._max_angle = -XS_MAX_ANGLE
             self._step = -X_SMALL
         elif new_ir_status == [0,0,0,1,0]:
+            self._max_angle = -S_MAX_ANGLE
             self._step = -SMALL
         elif new_ir_status == [0,0,0,1,1]:
+            self._max_angle = -M_MAX_ANGLE
             self._step = -MEDIUM
         elif new_ir_status == [0,0,0,0,1]:
+            self._max_angle = -L_MAX_ANGLE
             self._step = -LARGE
         elif new_ir_status == [0,0,0,0,0]:
             self._off_track_count += 1
             if self._ir_status[0] == 1:
+                self._max_angle = XL_MAX_ANGLE
                 self._step = X_LARGE
             elif self._ir_status[4] == 1:
+                self._max_angle = -XL_MAX_ANGLE
                 self._step = -X_LARGE
+            else:
+                return np.deg2rad(steering_angle)
             
         steering_angle += self._step
             
-        if steering_angle < -45:
-            steering_angle = -45
-        elif steering_angle > 45:
-            steering_angle = 45
-        elif steering_angle < 1 and steering_angle > -1:
-            steering_angle = 0
+        if steering_angle < self._max_angle:
+            steering_angle = self._max_angle
+        elif steering_angle > self._max_angle:
+            steering_angle = self._max_angle
         
         self._ir_status = new_ir_status
         print("Steering angle:", steering_angle)

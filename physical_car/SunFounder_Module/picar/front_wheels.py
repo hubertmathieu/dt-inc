@@ -12,8 +12,8 @@
 **********************************************************************
 '''
 
-from SunFounder_PiCar.picar.SunFounder_PCA9685 import Servo
-from SunFounder_PiCar.picar.filedb import fileDB
+from SunFounder_Module.picar.SunFounder_PCA9685 import Servo
+from SunFounder_Module.picar.filedb import fileDB
 
 class Front_Wheels(object):
 	''' Front wheels control class '''

@@ -1,7 +1,5 @@
 import numpy as np
 
-MAX_SPEED = 0.23 # m/s
-
 class Accelerator:
 
     def __init__(self, accel, goal_speed, interval, max_speed):
@@ -22,7 +20,7 @@ class Accelerator:
         elif (last_speed > self.goal_speed):
             next_speed = last_speed - accel_per_clk
             if (next_speed < self._goal_speed):
-                next_speed = self.goal_speed
+                next_speed = self._goal_speed
         else:
             next_speed = last_speed
 
@@ -30,16 +28,24 @@ class Accelerator:
 
     # si la decceleration devrait commencer
     def determine_stopping_dist(self, obstacle_distance, last_speed):
-        if (obstacle_distance > 0 and last_speed != 0 and not self.should_stop):
-            dist_to_stop = (last_speed ** 2) / (2*self.max_accel)
+        if (obstacle_distance > 0 and last_speed != 0):
+            dist_to_stop_cm = ((last_speed ** 2) / (2*self.max_accel)) * 100
+                
+            return np.abs(dist_to_stop_cm) >= obstacle_distance
+        else:
+            return False
+        
+    def get_speeds_to_accel(self):
+        accel_per_clk = self._max_accel * self._interval
 
-            self.should_stop = np.abs(dist_to_stop) > obstacle_distance
+        return np.linspace(0, self._goal_speed, int(self._goal_speed / accel_per_clk))
+        
 
     # atteindre 0 de vitesse
     def get_stop_speeds_list(self, last_speed):
         accel_per_clk = self._max_accel * self._interval
 
-        return np.linspace(last_speed, 0, accel_per_clk)
+        return np.linspace(last_speed, 0, int(last_speed / accel_per_clk))
 
     # retourne une liste des vitesse pour un parcours de distance x (début: 0m/s, fin: 0m/s)
     def get_speeds_list_for_travel(self, distance, backward=True):
