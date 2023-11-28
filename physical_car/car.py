@@ -17,14 +17,13 @@ from module.accelerator import Accelerator
 from module.circumvention import Circumvention
 
 # CONSTANTS
-MAX_ACCEL = 0.01
+MAX_ACCEL = 0.05
 MAX_SPEED = 0.23 # m/s
-INTERVAL = 0.05 # seconds
+INTERVAL = 0.1 # seconds
 
 @dataclass
 class CarMeasurement:
     timestamp: float
-    delta_time: float
     position_x: float
     position_y: float
     angle: float
@@ -35,11 +34,11 @@ class CarMeasurement:
 
     
     def header(self):
-        return ["timestamp", "delta_time", "position_x", "position_y", "angle", "speed", "acceleration", "steering_angle", "distance_from_object (cm)"]
+        return ["timestamp", "position_x", "position_y", "angle", "speed", "acceleration", "steering_angle", "distance_from_object (cm)"]
 
 
     def to_list(self):
-        return [self.timestamp, self.delta_time, self.position_x, self.position_y, self.angle, self.speed, self.acceleration, self.steering_angle, self.distance_from_object_cm]
+        return [self.timestamp, self.position_x, self.position_y, self.angle, self.speed, self.acceleration, self.steering_angle, self.distance_from_object_cm]
 
 
 @dataclass
@@ -66,13 +65,13 @@ class Car:
         self._front_wheels = Front_Wheels()
         self._back_wheels = Back_Wheels()
         self._detector = Ultrasonic_Avoidance(20)
-        self._detector_filter = US_Filter(5) # Taille de la fenêtre
+        self._detector_filter = US_Filter(8) # Taille de la fenêtre
         self._line_follower = Line_Follower()
         
         self._angle_calculator = Angle_Calculator()
         self._accelerator = Accelerator(MAX_ACCEL, self._goal_speed, INTERVAL, MAX_SPEED)
         
-        default_object_size = 0.18 # Taille par défaut que le char va éviter (meters)
+        default_object_size = 0.15 # Taille par défaut que le char va éviter (meters)
         self._circumvention_module = Circumvention(self._wheel_base, self._tire_width, default_object_size)
 
         self._logger = CarLogger()
@@ -136,15 +135,13 @@ class Car:
         
     def loop(self):
         """
-        Mouvement par défaut
+        Mouvement par défaut pour satisfaire les dieux
         """
         new_movement = self.movement
+        distance_from_object_cm = self._detector_filter.prev_ma
 
 
-        """
-        Données des senseurs
-        """
-        distance_from_object_cm = self.get_distance_from_object()
+
 
 
         """
@@ -158,16 +155,18 @@ class Car:
         Boucle générale
         """
         if not self._is_bypassed:
-            if(distance_from_object_cm <= 50):
+            """
+            Données des senseurs
+            """
+            distance_from_object_cm = self.get_distance_from_object()
+            
+            if(distance_from_object_cm <= 30):
                 if (self._accelerator.determine_stopping_dist(distance_from_object_cm, self.last_speed())):
-                    # self._future_movements = [CarMovement(self.last_speed(), angle) for angle in self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1)]
-                    # self._is_bypassed = True
-                    pass
-                pass
+                    self._future_movements = [CarMovement(self._logger.last_measurement().speed, angle) for angle in self._circumvention_module.steering_for_circumvention(0.6, self._sampling_time, 0.1)]
+                    self._is_bypassed = True
             else:
                 next_speed = self._accelerator.speed_to_accel(self.last_speed())
                 new_movement = CarMovement(next_speed, 0)
-        
         self.movement = new_movement
         
 
@@ -215,7 +214,7 @@ class Car:
 
 
     def get_distance_from_object(self):
-        raw_distance = self._detector.get_distance()
+        raw_distance = self._detector.distance()
         if raw_distance == -1:
             return self._detector_filter.prev_ma
         return self._detector_filter.filter_stream(raw_distance)
@@ -268,13 +267,9 @@ class Car:
         self._back_wheels.speed_right = np.rint(speed_right)
         
 
-    def speed_m_per_s_to_motor_percentage(self, speed_m_per_s):
-        return 1/self.speed_fitter_function(speed_m_per_s)
-
-
 class CarLogger:
     def __init__(self):
-        self._data: List[CarMeasurement] = [CarMeasurement(timer(),0,0,0,0,0,0,0,-1)]
+        self._data: List[CarMeasurement] = [CarMeasurement(timer(),0,0,0,0,0,0,-1)]
 
 
     @property
@@ -298,13 +293,5 @@ class CarLogger:
             for measurement in self.data:
                 writer.writerow(measurement.to_list())
 
-if __name__ == "__main__":
-    i = 0
-    car = Car()
-    car.goal_speed = MAX_SPEED
-
-    while(i < 50):
-        car.loop()
-        i += 1
 
 
