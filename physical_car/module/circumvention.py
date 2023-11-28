@@ -20,7 +20,7 @@ class Circumvention:
         current_angle = np.arcsin(delta_position_x/distance_travelled)
         angle_to_travel_r = np.diff(current_angle)
         angle_to_travel_r = np.concatenate(([0],angle_to_travel_r,[0]))
-        
+    
 
         circle_to_travel_ratio = angle_to_travel_r/(2*np.pi)
         turning_circumference_m = distance_travelled/circle_to_travel_ratio
@@ -28,10 +28,15 @@ class Circumvention:
         stuff_that_goes_inside_arcsin = self._wheelbase_m/(turning_radius_m-self._tirewidth_m/2)
         steering_angle = np.arcsin(stuff_that_goes_inside_arcsin)
         
+        moitie = int(len(steering_angle)*0.5)
+        gaussian_to_truncate = int(2/speed)
+        
+        error = np.cumsum(steering_angle)[-1]
+        minimum = np.min(steering_angle)
+        print(minimum)
+        error_corrector = [minimum for _ in range (int(error/(np.abs(minimum))))]
+        steering_angle = np.concatenate([steering_angle[gaussian_to_truncate:moitie], error_corrector, steering_angle[moitie:-gaussian_to_truncate]])
 
-        end_of_gaussian = int(len(steering_angle)*0.58)
-        time_to_go_linear = np.linspace(steering_angle[end_of_gaussian],0, int(1/sampling_time)/3)
-        steering_angle = np.concatenate([steering_angle[20:end_of_gaussian], time_to_go_linear])
         return steering_angle
 
 
@@ -46,7 +51,7 @@ class Circumvention:
         b = distance_from_object
         c = distance_from_object / 5 # constante arbitraire
 
-        # Utilisation d'une gaussienne
+        # Utilisation d'une gaussienne pour définir la position x et y
         positions_y_m = np.linspace(0,overall_distance_travelled_m, int(seconds_travelled/sampling_time))
         position_x_m = a * np.exp(-(((positions_y_m-b)**2) / ((2*c)**2)))
 
