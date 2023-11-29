@@ -21,6 +21,9 @@ from module.circumvention import Circumvention
 MAX_ACCEL = 0.3
 MAX_SPEED = 0.15 # m/s
 INTERVAL = 0.1 # seconds
+MINIMUM_SPEED = 0.03
+
+CIRCUMVENTION_SPEED = 0.1
 
 class Parcour(Enum):
     BACKWARD = 1
@@ -71,17 +74,17 @@ class Car:
         self._parcour = Parcour.OBSTACLE
         
         if (self._parcour == Parcour.BACKWARD):
-            self._goal_speed = 0.23
             self._max_speed = 0.23
-            self._max_accel = 0.1
+            self._goal_speed = self._max_speed
+            self._max_accel = 0.15
         elif (self._parcour == Parcour.OBSTACLE):
-            self._goal_speed = 0.15
             self._max_speed = 0.15
-            self._max_accel = 0.1
+            self._goal_speed = self._max_speed
+            self._max_accel = 0.15
         elif (self._parcour == Parcour.CURVE):
-            self._goal_speed = 0.12
             self._max_speed = 0.12
-            self._max_accel = 0.1
+            self._goal_speed = self._max_speed
+            self._max_accel = 0.15
         else:
             self._goal_speed = MAX_SPEED
             self._max_speed = MAX_SPEED
@@ -153,22 +156,23 @@ class Car:
 
 
     def stop(self):
+        
+        self.goal_speed = 0
+        
+        next_speed = self._accelerator.get_next_speed(self.last_speed())
+        while(next_speed > 0):
+            print(next_speed)
+            self.movement = CarMovement(next_speed, 0)
+            next_speed = self._accelerator.get_next_speed(self.last_speed())
+            
+            self._loop_footer()
+            
         self._running = False
-        self.movement = CarMovement(0, 0)
         self._logger.dump_to_file()
-        self.bypassed_logic()
         
     def curve_parcour(self):
-        next_speed = self._accelerator.get_next_speed(self.last_speed())
-        ir_status = self._line_follower.read_digital()
-        last_steering_angle = self._logger.last_measurement().steering_angle
-        new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
         
-        if (ir_status == [1, 1, 1, 1, 1]):
-            self.goal_speed = 0
-            new_angle = 0
-        
-        self.movement = CarMovement(next_speed, new_angle)
+        self.movement = self._follow_line_movement()
         self._loop_footer()
         
     def obstacle_parcour(self):
@@ -184,6 +188,8 @@ class Car:
         """
         if self._is_bypassed:
             new_movement = self.bypassed_logic()
+            if (not self._is_bypassed):
+                self.goal_speed = self._max_speed
         
         """
         Boucle générale
@@ -200,7 +206,7 @@ class Car:
                         #backward
                         self._future_movements.extend([CarMovement(speed, -0.1) for speed in self._accelerator.get_speeds_list_for_travel(0.30)])
                         # circumvention
-                        self.goal_speed = 0.1
+                        self.goal_speed = CIRCUMVENTION_SPEED
                         accel_speeds = self._accelerator.get_speeds_to_accel()
                         self._future_movements.extend([CarMovement(speed, 0) for speed in accel_speeds])
                         angles = self._circumvention_module.steering_for_circumvention(0.8, self._sampling_time, 0.1)
@@ -216,21 +222,10 @@ class Car:
                 elif (self._accelerator.determine_stopping_dist(distance_from_object_cm - 15, self.last_speed())):
                     self.goal_speed = 0
                 
-                next_speed = self._accelerator.get_next_speed(self.last_speed())
-                
-                ir_status = self._line_follower.read_digital()
-                last_steering_angle = self._logger.last_measurement().steering_angle
-                new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
-                new_movement = CarMovement(next_speed, new_angle)
+                new_movement = self._follow_line_movement()
                     
             else:
-                self.goal_speed = 0.15
-                next_speed = self._accelerator.get_next_speed(self.last_speed())
-                
-                ir_status = self._line_follower.read_digital()
-                last_steering_angle = self._logger.last_measurement().steering_angle
-                new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
-                new_movement = CarMovement(next_speed, new_angle)
+                new_movement = self._follow_line_movement()
                 
         self.movement = new_movement
         
@@ -251,8 +246,8 @@ class Car:
         self._loop_footer()
             
         
-        
-        
+    
+    # loop finale de l'auto
     def loop(self):
         """
         Mouvement par défaut pour satisfaire les dieux
@@ -298,6 +293,18 @@ class Car:
         
         self._loop_footer()
         
+    def _follow_line_movement(self):
+        next_speed = self._accelerator.get_next_speed(self.last_speed())
+        
+        ir_status = self._line_follower.read_digital()
+        last_steering_angle = self._logger.last_measurement().steering_angle
+        new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
+        
+        if (ir_status == [1, 1, 1, 1, 1]):
+            print("J'ai vu la ligne")
+            self._running = False
+        
+        return CarMovement(next_speed, new_angle)
 
         
     def _loop_footer(self):
@@ -389,12 +396,17 @@ class Car:
             self._back_wheels.forward() # Forward et Backward sont inversés
         else:
             self._back_wheels.backward()
-            
+        
         speed_right = self._speed_to_engine(np.abs(self.movement.speed))
         speed_left = self._speed_to_engine(np.abs(self.movement.speed))
         
+        if self._angle_calculator.is_off_track():
+            if self.movement.steering_angle < np.deg2rad(-40):
+                speed_left = self._speed_to_engine(MINIMUM_SPEED)
+            elif self.movement.steering_angle > np.deg2rad(40):
+                speed_right = self._speed_to_engine(MINIMUM_SPEED)
+                
         self._front_wheels.turn(np.rad2deg(- self.movement.steering_angle) + 90)
-            
         self._back_wheels.speed_left = np.rint(speed_left)
         self._back_wheels.speed_right = np.rint(speed_right)
         

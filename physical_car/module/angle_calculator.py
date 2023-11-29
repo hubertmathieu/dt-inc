@@ -13,7 +13,7 @@ MEDIUM = 3
 LARGE = 5
 X_LARGE = 10
 
-max_off_track_count = 40
+max_off_track_count = 10
 
 class Angle_Calculator:
     
@@ -31,7 +31,6 @@ class Angle_Calculator:
         :return: boolean
         """
         if self._off_track_count >= max_off_track_count:
-            self._off_track_count = 0
             return True
         else:
             return False
@@ -49,6 +48,7 @@ class Angle_Calculator:
         steering_angle = np.rad2deg(steering_angle)
 
         if	new_ir_status == [0,0,1,0,0]:
+            self._off_track_count = 0
             if steering_angle < -30:
                 self._step = LARGE
             elif steering_angle < -15:
@@ -66,27 +66,35 @@ class Angle_Calculator:
             elif steering_angle > 3:
                 self._step = -X_SMALL
         elif new_ir_status == [0,1,1,0,0]:
+            self._off_track_count = 0
             self._max_angle = XS_MAX_ANGLE
             self._step = X_SMALL
         elif new_ir_status == [0,1,0,0,0]:
+            self._off_track_count = 0
             self._max_angle = S_MAX_ANGLE
             self._step = SMALL
         elif new_ir_status == [1,1,0,0,0]:
+            self._off_track_count = 0
             self._max_angle = M_MAX_ANGLE
             self._step = MEDIUM
         elif new_ir_status == [1,0,0,0,0]:
+            self._off_track_count = 0
             self._max_angle = L_MAX_ANGLE
             self._step = LARGE
         elif new_ir_status == [0,0,1,1,0]:
+            self._off_track_count = 0
             self._max_angle = -XS_MAX_ANGLE
             self._step = -X_SMALL
         elif new_ir_status == [0,0,0,1,0]:
+            self._off_track_count = 0
             self._max_angle = -S_MAX_ANGLE
             self._step = -SMALL
         elif new_ir_status == [0,0,0,1,1]:
+            self._off_track_count = 0
             self._max_angle = -M_MAX_ANGLE
             self._step = -MEDIUM
         elif new_ir_status == [0,0,0,0,1]:
+            self._off_track_count = 0
             self._max_angle = -L_MAX_ANGLE
             self._step = -LARGE
         elif new_ir_status == [0,0,0,0,0]:
