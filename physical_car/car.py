@@ -78,7 +78,7 @@ class Car:
             self._goal_speed = self._max_speed
             self._max_accel = 0.15
         elif (self._parcour == Parcour.OBSTACLE):
-            self._max_speed = 0.15
+            self._max_speed = 0.1
             self._goal_speed = self._max_speed
             self._max_accel = 0.15
         elif (self._parcour == Parcour.CURVE):
@@ -99,7 +99,7 @@ class Car:
         self._angle_calculator = Angle_Calculator()
         self._accelerator = Accelerator(self._max_accel, self._goal_speed, INTERVAL, self._max_speed)
         
-        default_object_size = 0.3 # Taille par défaut que le char va éviter (meters)
+        default_object_size = 0.22 # Taille par défaut que le char va éviter (meters)
         self._circumvention_module = Circumvention(self._wheel_base, self._tire_width, default_object_size)
 
         self._logger = CarLogger()
@@ -156,19 +156,20 @@ class Car:
 
 
     def stop(self):
+        try:
+            self.goal_speed = 0
         
-        self.goal_speed = 0
-        
-        next_speed = self._accelerator.get_next_speed(self.last_speed())
-        while(next_speed > 0):
-            print(next_speed)
-            self.movement = CarMovement(next_speed, 0)
             next_speed = self._accelerator.get_next_speed(self.last_speed())
-            
-            self._loop_footer()
-            
+            while(next_speed > 0):
+                print(next_speed)
+                self.movement = CarMovement(next_speed, 0)
+                next_speed = self._accelerator.get_next_speed(self.last_speed())
+                self._loop_footer()
+        except:
+            self.movement = CarMovement(0, 0)
         self._running = False
         self._logger.dump_to_file()
+
         
     def curve_parcour(self):
         
