@@ -29,13 +29,12 @@ class Circumvention:
         steering_angle = np.arcsin(stuff_that_goes_inside_arcsin)
         
         moitie = int(len(steering_angle)*0.5)
-        gaussian_to_truncate = int(2/speed)
+        gaussian_to_truncate = int(2/speed) + 5 # A MODIFIER PROBABLEMENT
         
         error = np.cumsum(steering_angle)[-1]
         minimum = np.min(steering_angle)
         print(minimum)
-        error_corrector = [minimum for _ in range (int(error/(np.abs(minimum)))+10)]
-        error_corrector.append(0)
+        error_corrector = [minimum for _ in range (int(error/(np.abs(minimum))))] # A MODIFIER PROBABLEMENT
         steering_angle = np.concatenate([steering_angle[gaussian_to_truncate:moitie], error_corrector])
         return steering_angle
 

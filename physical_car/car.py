@@ -72,24 +72,9 @@ class Car:
         self._position_y = 0
         self._angle = np.pi/2
         
-        self._parcour = Parcour.OBSTACLE
-        
-        if (self._parcour == Parcour.BACKWARD):
-            self._max_speed = 0.23
-            self._goal_speed = self._max_speed
-            self._max_accel = 0.15
-        elif (self._parcour == Parcour.OBSTACLE):
-            self._max_speed = MAX_SPEED
-            self._goal_speed = self._max_speed
-            self._max_accel = MAX_ACCEL
-        elif (self._parcour == Parcour.CURVE):
-            self._max_speed = 0.12
-            self._goal_speed = self._max_speed
-            self._max_accel = 0.15
-        else:
-            self._goal_speed = MAX_SPEED
-            self._max_speed = MAX_SPEED
-            self._max_accel = MAX_ACCEL
+        self._max_speed = MAX_SPEED
+        self._goal_speed = self._max_speed
+        self._max_accel = MAX_ACCEL
 
         self._front_wheels = Front_Wheels()
         self._back_wheels = Back_Wheels()
@@ -141,16 +126,7 @@ class Car:
             
         while self._running:
             try:
-                if (self._parcour == Parcour.BACKWARD):
-                    self.bacward_parcour()
-                elif (self._parcour == Parcour.OBSTACLE):
-                    self.obstacle_parcour()
-                elif (self._parcour == Parcour.CURVE):
-                    self.curve_parcour()
-                else:
-                    assert f'Invalid parcours'
-                #self.loop()
-                #self.test_line_follower()
+                self.loop()
             except KeyboardInterrupt:
                 self.stop()
         self.stop()
@@ -172,13 +148,7 @@ class Car:
         self._logger.dump_to_file()
 
         
-    def curve_parcour(self):
-        
-        self.movement = self._follow_line_movement()
-        self._loop_footer()
-        
-    def obstacle_parcour(self):
-        
+    def loop(self):
         """
         Mouvement par défaut pour satisfaire les dieux
         """
@@ -202,17 +172,12 @@ class Car:
             """
             distance_from_object_cm = self.get_distance_from_object()
             if(distance_from_object_cm <= 40):
-                #print("distance_from_object_cm, ", distance_from_object_cm)
                 need_to_stop = self._is_object_too_close(distance_from_object_cm) or self._accelerator.determine_stopping_dist(0 if self._is_object_too_close(distance_from_object_cm) else distance_from_object_cm - MAX_OBSTACLE_DIST_CM, self.last_speed())
                 if(need_to_stop):
-                    if(self._logger.last_measurement().steering_angle < 0):
-                        # Tourne a gauche
-                        self._prepare_to_circumvention(distance_from_object_cm, False)
-                        self._do_circumvention_when_close(False)
-                    else:
-                        # Tourne a droite
-                        self._prepare_to_circumvention(distance_from_object_cm, True)
-                        self._do_circumvention_when_close(True)
+                    is_droite = self._logger.last_measurement().steering_angle < 0
+
+                    self._prepare_to_circumvention(is_droite)
+                    self._do_circumvention(is_droite)
 
                 else:
                     new_movement = self._follow_line_movement()
@@ -220,67 +185,6 @@ class Car:
             else:
                 new_movement = self._follow_line_movement()
                 
-        self.movement = new_movement
-        
-        self._loop_footer()
-        
-    def bacward_parcour(self):
-        
-        if not self._is_bypassed:
-            self._future_movements.extend([CarMovement(speed, 0) for speed in self._accelerator.get_speeds_list_for_travel(0.32)])
-            self._is_bypassed = True
-        
-        
-        if self._is_bypassed:
-            self.movement = self.bypassed_logic()
-            if not self._is_bypassed:
-                self.stop()
-
-        self._loop_footer()
-            
-        
-    
-    # loop finale de l'auto
-    def loop(self):
-        """
-        Mouvement par défaut pour satisfaire les dieux
-        """
-        new_movement = self.movement
-        distance_from_object_cm = self._detector_filter.prev_ma
-
-
-
-
-
-        """
-        Boucle alternative
-        """
-        if self._is_bypassed:
-            new_movement = self.bypassed_logic()
-        
-
-        """
-        Boucle générale
-        """
-        if not self._is_bypassed:
-            """
-            Données des senseurs
-            """
-            distance_from_object_cm = self.get_distance_from_object()
-            if(distance_from_object_cm <= 60):
-
-                if (self._accelerator.determine_stopping_dist(distance_from_object_cm - 15, self.last_speed())):
-#                     next_speeds_to_stop = self._accelerator.get_stop_speeds_list(self.last_speed())
-#                     print(next_speeds_to_stop)
-#                     self._future_movements.extend([CarMovement(speed, 0) for speed in next_speeds_to_stop])
-#                     self._future_movements.extend([CarMovement(0, 0) for _ in range(5)])
-#                     self._future_movements.extend([CarMovement(speed, 0) for speed in self._accelerator.get_speeds_list_for_travel(0.30)])
-#                   print(self._future_movements)
-                    self._future_movements = [CarMovement(self._logger.last_measurement().speed, angle) for angle in self._circumvention_module.steering_for_circumvention(0.6, self._sampling_time, 0.1)]
-                    self._is_bypassed = True
-            else:
-                next_speed = self._accelerator.get_next_speed(self.last_speed())
-                new_movement = CarMovement(next_speed, 0)
         self.movement = new_movement
         
         self._loop_footer()
@@ -294,7 +198,7 @@ class Car:
         #print(last_steering_angle)
         new_angle = self._angle_calculator.get_steering_angle(ir_status, last_steering_angle)
         
-        if (ir_status == [1, 1, 1, 1, 1]):
+        if (np.sum(ir_status) >= 3):
             print("J'ai vu la ligne")
             self._running = False
         
@@ -303,17 +207,22 @@ class Car:
     def _is_object_too_close(self, distance_from_object_cm):
         return distance_from_object_cm <= MAX_OBSTACLE_DIST_CM
     
-    def _prepare_to_circumvention(self, distance_from_object_cm, is_droite):
+    def _prepare_to_circumvention(self, is_droite):
         #deccel
         self._future_movements.extend([CarMovement(speed, 0) for speed in self._accelerator.get_stop_speeds_list(self.last_speed())])
+
         #stop
         self._future_movements.extend([CarMovement(0, 0) for _ in range(20)])
+
         #backward
         backward_dist_m = 0.335
-        backward_angle = 0
+        backward_angle = -0.15
+        #backward_angle = 0.15 if is_droite else -0.15
         self._future_movements.extend([CarMovement(speed, backward_angle) for speed in self._accelerator.get_speeds_list_for_travel(backward_dist_m)])
+
         #stop
         self._future_movements.extend([CarMovement(0, 0) for _ in range(20)])
+
         #accel
         self.goal_speed = CIRCUMVENTION_SPEED
         accel_speeds = self._accelerator.get_speeds_to_accel()
@@ -321,29 +230,17 @@ class Car:
         
         self._is_bypassed = True
         
-    def _do_circumvention_when_close(self, is_droite):
+    def _do_circumvention(self, is_droite):
         self._angle_calculator.reset_off_track_count()
+
         # circumvention
-        angles = self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1, 0.3)
-        moitie = int(len(angles)/2)
+        angles = self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1, 0.24)
+
         future_movements = []
-        for i in range(len(angles)):
-            if i < moitie:
-                future_movements.append(CarMovement(self.goal_speed, 0))
-            else:
-                future_movements.append(CarMovement(self.goal_speed, angles[i])) 
-        future_movements = future_movements[:-15]
+        for angle in angles:
+            future_movements.append(CarMovement(self.goal_speed, angle)) 
+            #future_movements.append(CarMovement(self.goal_speed, -angle if is_droite else angle)) 
         self._future_movements.extend(future_movements)
-        self._is_bypassed = True
-        
-        
-    def _do_circumvention(self):
-        self._angle_calculator.reset_off_track_count()
-        # circumvention
-        angles = self._circumvention_module.steering_for_circumvention(0.7, self._sampling_time, 0.1, 0.27)
-        
-        for i in range(len(angles)):
-            self._future_movements.append(CarMovement(self.goal_speed, angles[i]))
         self._is_bypassed = True
 
         
@@ -356,19 +253,16 @@ class Car:
         if(delta_time < self._sampling_time):
             sleep(self._sampling_time - delta_time)
 
-
         """
         Temps de la boucle
         """
         timestamp = timer()
-
 
         """
         Calculation nécessitant le temps
         """
         acceleration = self.calculate_acceleration(timestamp)
         self.calculate_position_and_angle(timestamp)
-
 
         """
         Journalisation
@@ -398,7 +292,6 @@ class Car:
             return self._detector_filter.prev_ma
         return self._detector_filter.filter_stream(raw_distance)
             
-        
 
     def calculate_acceleration(self, timestamp):
         last_speed = self._logger.last_measurement().speed
