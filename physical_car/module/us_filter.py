@@ -4,7 +4,7 @@ class US_Filter:
     
     def __init__(self, window_size):
         self._buffer = deque(maxlen=window_size)
-        self.prev_ma = 100
+        self.prev_ma = 50
     
     def filter_stream(self, stream):
         """

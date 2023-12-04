@@ -28,7 +28,7 @@ class Accelerator:
 
     # si la decceleration devrait commencer
     def determine_stopping_dist(self, obstacle_distance, last_speed):
-        if (obstacle_distance > 0 and last_speed != 0):
+        if (last_speed != 0):
             dist_to_stop_cm = ((last_speed ** 2) / (2*self.max_accel)) * 100
                 
             return np.abs(dist_to_stop_cm) >= obstacle_distance

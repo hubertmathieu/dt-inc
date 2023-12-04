@@ -34,6 +34,10 @@ class Angle_Calculator:
             return True
         else:
             return False
+        
+    def reset_off_track_count(self):
+        self._off_track_count
+        self._ir_status[0] = [[0,0,0,0,0]]
     
     
     def get_steering_angle(self, new_ir_status, steering_angle):
@@ -106,6 +110,7 @@ class Angle_Calculator:
                 self._max_angle = -XL_MAX_ANGLE
                 self._step = -X_LARGE
             else:
+                print("Steering angle dans le return:", steering_angle)
                 return np.deg2rad(steering_angle)
             
         steering_angle += self._step
