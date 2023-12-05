@@ -2,15 +2,15 @@ import numpy as np
 
 # Constante
 XS_MAX_ANGLE = 5
-S_MAX_ANGLE = 10
-M_MAX_ANGLE = 20
-L_MAX_ANGLE = 30
+S_MAX_ANGLE = 8
+M_MAX_ANGLE = 15
+L_MAX_ANGLE = 28
 XL_MAX_ANGLE = 45
 
 X_SMALL = 1
 SMALL = 2
-MEDIUM = 3
-LARGE = 5
+MEDIUM = 4
+LARGE = 6
 X_LARGE = 10
 
 max_off_track_count = 10
@@ -34,6 +34,10 @@ class Angle_Calculator:
             return True
         else:
             return False
+        
+    def reset_off_track_count(self):
+        self._off_track_count
+        self._ir_status[0] = [[0,0,0,0,0]]
     
     
     def get_steering_angle(self, new_ir_status, steering_angle):
@@ -47,23 +51,23 @@ class Angle_Calculator:
         print("IR Status:", new_ir_status)
         steering_angle = np.rad2deg(steering_angle)
 
-        if	new_ir_status == [0,0,1,0,0]:
+        if  new_ir_status == [0,0,1,0,0]:
             self._off_track_count = 0
-            if steering_angle < -30:
+            if steering_angle < -28:
                 self._step = LARGE
             elif steering_angle < -15:
                 self._step = MEDIUM
-            elif steering_angle < -5:
+            elif steering_angle < -8:
                 self._step = SMALL
-            elif steering_angle < -3:
+            elif steering_angle < -5:
                 self._step = X_SMALL
-            elif steering_angle > 30:
+            elif steering_angle > 28:
                 self._step = -LARGE
             elif steering_angle > 15:
                 self._step = -MEDIUM
-            elif steering_angle > 5:
+            elif steering_angle > 8:
                 self._step = -SMALL
-            elif steering_angle > 3:
+            elif steering_angle > 5:
                 self._step = -X_SMALL
         elif new_ir_status == [0,1,1,0,0]:
             self._off_track_count = 0
@@ -106,6 +110,7 @@ class Angle_Calculator:
                 self._max_angle = -XL_MAX_ANGLE
                 self._step = -X_LARGE
             else:
+                print("Steering angle dans le return:", steering_angle)
                 return np.deg2rad(steering_angle)
             
         steering_angle += self._step
